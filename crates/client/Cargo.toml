@@ -1,0 +1,11 @@
+[package]
+name = "client"
+version.workspace = true
+edition = "2021"
+
+[dependencies]
+bevy.workspace = true
+bevy_renet = "4.0.1"
+postcard.workspace = true
+serde.workspace = true
+shared.workspace = true
