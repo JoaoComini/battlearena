@@ -22,7 +22,7 @@ pub struct InputQueue(pub VecDeque<InputEntry>);
 #[derive(Resource, Default)]
 pub struct CurrentTick(pub TickNumber);
 
-/// O(1) reverse lookup from NetworkId to the corresponding player Entity.
-/// Kept in sync by handle_server_events.
+/// O(1) reverse lookup from NetworkId to the corresponding Bevy Entity.
+/// Covers all networked entities, not just players.
 #[derive(Resource, Default)]
-pub struct PlayerRegistry(pub HashMap<NetworkId, Entity>);
+pub struct EntityRegistry(pub HashMap<NetworkId, Entity>);

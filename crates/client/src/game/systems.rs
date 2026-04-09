@@ -9,8 +9,8 @@ use shared::{
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::resources::{
-    CurrentInput, InputHistory, LocalClientId, LocalPlayer, PlayerRegistry, PredictedPosition,
-    PreviousPredictedPosition, ServerPosition, SpawnRegistry,
+    CurrentInput, InputHistory, LocalClientId, LocalPlayer, PendingCorrection, EntityRegistry,
+    PredictedPosition, PreviousPredictedPosition, SnapshotBuffer, SpawnRegistry,
 };
 
 static TICK: AtomicU32 = AtomicU32::new(0);
@@ -66,14 +66,15 @@ pub fn setup_scene(
                 PredictedPosition::default(),
                 PreviousPredictedPosition::default(),
                 InputHistory::default(),
-                ServerPosition(pos),
                 Mesh3d(capsule.clone()),
                 MeshMaterial3d(local_mat.clone()),
                 Transform::from_translation(Vec3::new(pos.x, 20.0, -pos.y)),
             ));
         } else {
+            let mut buf = SnapshotBuffer::default();
+            buf.push(0.0, pos);
             commands.entity(entity).insert((
-                ServerPosition(pos),
+                buf,
                 Mesh3d(capsule.clone()),
                 MeshMaterial3d(remote_mat.clone()),
                 Transform::from_translation(Vec3::new(pos.x, 20.0, -pos.y)),
@@ -83,7 +84,6 @@ pub fn setup_scene(
 }
 
 /// Drains the reliable channel and handles all lifecycle and correction messages:
-/// - Welcome: spawns the local player entity.
 /// - EntitySpawned: spawns remote entities via SpawnRegistry.
 /// - EntityDespawned: despawns entities.
 /// - Correction: snaps + re-simulates the local player's prediction.
@@ -93,12 +93,9 @@ pub fn setup_scene(
 pub fn recv_reliable(
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
-    mut registry: ResMut<PlayerRegistry>,
+    mut registry: ResMut<EntityRegistry>,
     spawn_registry: Res<SpawnRegistry>,
-    mut local: Query<
-        (&mut PredictedPosition, &mut PreviousPredictedPosition, &InputHistory),
-        With<LocalPlayer>,
-    >,
+    local: Query<Entity, With<LocalPlayer>>,
 ) {
     let mut messages = Vec::new();
     while let Some(msg) = client.receive_message(DefaultChannel::ReliableOrdered) {
@@ -135,19 +132,36 @@ pub fn recv_reliable(
         }
     }
 
-    // Apply the latest correction (if any) in one pass.
-    if let Some((corrected_tick, server_pos)) = latest_correction {
-        if let Ok((mut predicted, mut prev_predicted, history)) = local.single_mut() {
-            let mut pos = server_pos;
-            for (tick, input, _) in &history.0 {
-                if *tick > corrected_tick {
-                    pos = apply_input(pos, *input);
-                }
-            }
-            prev_predicted.0 = pos;
-            predicted.0 = pos;
+    if let Some((tick, pos)) = latest_correction {
+        if let Ok(entity) = local.single() {
+            commands.entity(entity).insert(PendingCorrection { tick, pos });
         }
     }
+}
+
+/// Consumes a PendingCorrection on the local player, re-simulates from the
+/// input history, and snaps the predicted position.
+pub fn apply_correction(
+    mut commands: Commands,
+    mut local: Query<
+        (Entity, &mut PredictedPosition, &mut PreviousPredictedPosition, &InputHistory, &PendingCorrection),
+        With<LocalPlayer>,
+    >,
+) {
+    let Ok((entity, mut predicted, mut prev_predicted, history, correction)) = local.single_mut() else {
+        return;
+    };
+
+    let mut pos = correction.pos;
+    for (tick, input, _) in &history.0 {
+        if *tick > correction.tick {
+            pos = apply_input(pos, *input);
+        }
+    }
+    prev_predicted.0 = pos;
+    predicted.0 = pos;
+
+    commands.entity(entity).remove::<PendingCorrection>();
 }
 
 /// Reads keyboard input each frame.
@@ -197,59 +211,71 @@ pub fn send_input_tick(
     }
 }
 
-/// Receives WorldSnapshots and updates ServerPosition on each known entity.
+/// Receives WorldSnapshots, timestamps them with client real time, pushes into
+/// each entity's SnapshotBuffer, and trims acknowledged history for the local player.
 pub fn recv_world_state(
     mut client: ResMut<RenetClient>,
-    registry: Res<PlayerRegistry>,
-    mut server_positions: Query<&mut ServerPosition>,
+    registry: Res<EntityRegistry>,
+    time: Res<Time<bevy::prelude::Real>>,
+    mut buffers: Query<&mut SnapshotBuffer>,
     mut local: Query<(&NetworkId, &mut InputHistory), With<LocalPlayer>>,
 ) {
-    let mut latest: Option<(u32, Vec<shared::types::PlayerState>)> = None;
+    let receive_time = time.elapsed_secs_f64();
+
+    // Collect all snapshots received this fixed step.
+    let mut snapshots: Vec<(u32, Vec<shared::types::PlayerState>)> = Vec::new();
     while let Some(msg) = client.receive_message(DefaultChannel::Unreliable) {
         if let Ok(S2C::WorldSnapshot { tick, players }) = postcard::from_bytes(&msg) {
-            if latest.as_ref().map_or(true, |(t, _)| tick > *t) {
-                latest = Some((tick, players));
+            snapshots.push((tick, players));
+        }
+    }
+
+    // Sort by tick so older snapshots get pushed first.
+    snapshots.sort_unstable_by_key(|(tick, _)| *tick);
+
+    for (_tick, players) in &snapshots {
+        for state in players {
+            if let Some(&entity) = registry.0.get(&state.id) {
+                if let Ok(mut buf) = buffers.get_mut(entity) {
+                    buf.push(receive_time, state.pos);
+                }
             }
         }
     }
 
-    let Some((_server_tick, players)) = latest else {
-        return;
-    };
-
-    for state in &players {
-        if let Some(&entity) = registry.0.get(&state.id) {
-            if let Ok(mut sp) = server_positions.get_mut(entity) {
-                sp.0 = state.pos;
-            }
-        }
-    }
-
-    if let Ok((local_id, mut history)) = local.single_mut() {
-        if let Some(local_state) = players.iter().find(|s| s.id == *local_id) {
-            let ack = local_state.ack_tick;
-            while history.0.front().map_or(false, |(t, _, _)| *t <= ack) {
-                history.0.pop_front();
+    // Trim history for the local player using the latest snapshot's ack_tick.
+    if let Some((_tick, players)) = snapshots.last() {
+        if let Ok((local_id, mut history)) = local.single_mut() {
+            if let Some(local_state) = players.iter().find(|s| s.id == *local_id) {
+                let ack = local_state.ack_tick;
+                while history.0.front().map_or(false, |(t, _, _)| *t <= ack) {
+                    history.0.pop_front();
+                }
             }
         }
     }
 }
 
-/// Updates each player's Transform from predicted position (local) or ServerPosition (remote).
+/// Updates each player's Transform.
+/// Remote players: snapshot interpolation at (server_time - INTERP_DELAY).
+/// Local player: predicted position interpolated over the fixed-timestep overshoot.
 pub fn render_players(
-    time: Res<Time<Fixed>>,
-    mut remote: Query<(&ServerPosition, &mut Transform), Without<LocalPlayer>>,
+    time: Res<Time<bevy::prelude::Real>>,
+    fixed_time: Res<Time<Fixed>>,
+    mut remote: Query<(&SnapshotBuffer, &mut Transform), Without<LocalPlayer>>,
     mut local: Query<
         (&PredictedPosition, &PreviousPredictedPosition, &mut Transform),
         With<LocalPlayer>,
     >,
 ) {
-    let t = time.overstep_fraction();
-
-    for (server_pos, mut transform) in &mut remote {
-        transform.translation = Vec3::new(server_pos.0.x, 20.0, -server_pos.0.y);
+    let interp_target = time.elapsed_secs_f64() - shared::tick::INTERP_DELAY;
+    for (buf, mut transform) in &mut remote {
+        if let Some(pos) = buf.sample(interp_target) {
+            transform.translation = Vec3::new(pos.x, 20.0, -pos.y);
+        }
     }
 
+    let t = fixed_time.overstep_fraction();
     if let Ok((predicted, prev_predicted, mut transform)) = local.single_mut() {
         let pos = lerp_pos(prev_predicted.0, predicted.0, t);
         transform.translation = Vec3::new(pos.x, 20.0, -pos.y);

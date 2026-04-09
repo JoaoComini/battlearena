@@ -9,7 +9,7 @@ use shared::{
     types::{NetworkId, PlayerState, Pos2, PrefabId},
 };
 
-use crate::resources::{CurrentTick, InputEntry, InputQueue, PlayerRegistry, Position};
+use crate::resources::{CurrentTick, InputEntry, InputQueue, EntityRegistry, Position};
 
 /// How far the client-reported position may differ from the server's before
 /// a correction is issued (squared, in world units).
@@ -22,7 +22,6 @@ pub const PLAYER_PREFAB: PrefabId = PrefabId(0);
 pub struct PendingDespawn;
 
 /// Marker: this player entity has not yet been sent a Welcome message.
-/// Removed by send_welcome after the message is dispatched.
 #[derive(Component)]
 pub struct PendingWelcome;
 
@@ -35,7 +34,7 @@ pub struct LastSimulatedTick(pub shared::tick::TickNumber);
 pub fn handle_server_events(
     event: On<RenetServerEvent>,
     mut commands: Commands,
-    mut registry: ResMut<PlayerRegistry>,
+    mut registry: ResMut<EntityRegistry>,
     _players: Query<(Entity, &NetworkId)>,
 ) {
     match **event {
@@ -66,7 +65,7 @@ pub fn handle_server_events(
 /// Reads InputTick messages from all clients and enqueues them in tick order.
 pub fn receive_inputs(
     mut server: ResMut<RenetServer>,
-    registry: Res<PlayerRegistry>,
+    registry: Res<EntityRegistry>,
     mut queues: Query<&mut InputQueue>,
 ) {
     for client_id in server.clients_id() {

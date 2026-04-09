@@ -6,7 +6,7 @@ use crate::{
         advance_tick, broadcast_despawn, broadcast_state, handle_server_events, receive_inputs,
         send_initial_state, tick_game,
     },
-    resources::{CurrentTick, PlayerRegistry},
+    resources::{CurrentTick, EntityRegistry},
 };
 
 pub struct ServerGamePlugin;
@@ -14,7 +14,7 @@ pub struct ServerGamePlugin;
 impl Plugin for ServerGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CurrentTick>()
-            .init_resource::<PlayerRegistry>()
+            .init_resource::<EntityRegistry>()
             .add_observer(handle_server_events)
             .add_systems(
                 FixedUpdate,

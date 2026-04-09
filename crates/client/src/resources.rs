@@ -35,14 +35,62 @@ pub struct PreviousPredictedPosition(pub Pos2);
 #[derive(Component, Default)]
 pub struct InputHistory(pub VecDeque<(TickNumber, InputBits, Pos2)>);
 
-/// Last authoritative position received from the server for this player entity.
+/// Ring buffer of (server_elapsed, pos) snapshots for a remote entity.
+/// Used for snapshot interpolation: render at (now - INTERP_DELAY), lerping
+/// between the two bracketing entries.
 #[derive(Component, Default)]
-pub struct ServerPosition(pub Pos2);
+pub struct SnapshotBuffer(pub VecDeque<(f64, Pos2)>);
 
-/// O(1) reverse lookup from NetworkId to the corresponding player Entity.
-/// Kept in sync by recv_handshake and recv_entity_spawned.
+impl SnapshotBuffer {
+    /// Maximum number of snapshots to retain.
+    const CAP: usize = 32;
+
+    pub fn push(&mut self, elapsed: f64, pos: Pos2) {
+        self.0.push_back((elapsed, pos));
+        if self.0.len() > Self::CAP {
+            self.0.pop_front();
+        }
+    }
+
+    /// Interpolate position at the given target time.
+    /// Returns the oldest known position if target is before all snapshots,
+    /// or the newest if target is ahead (no extrapolation).
+    pub fn sample(&self, target: f64) -> Option<Pos2> {
+        let buf = &self.0;
+        if buf.is_empty() {
+            return None;
+        }
+        if target <= buf.front().unwrap().0 {
+            return Some(buf.front().unwrap().1);
+        }
+        if target >= buf.back().unwrap().0 {
+            return Some(buf.back().unwrap().1);
+        }
+        // Find the two snapshots bracketing target.
+        let idx = buf.partition_point(|(t, _)| *t <= target);
+        let (t0, p0) = buf[idx - 1];
+        let (t1, p1) = buf[idx];
+        let frac = ((target - t0) / (t1 - t0)) as f32;
+        Some(Pos2 {
+            x: p0.x + (p1.x - p0.x) * frac,
+            y: p0.y + (p1.y - p0.y) * frac,
+        })
+    }
+}
+
+/// Pending position correction from the server. Written by recv_reliable,
+/// consumed and removed by apply_correction.
+#[derive(Component)]
+pub struct PendingCorrection {
+    pub tick: shared::tick::TickNumber,
+    pub pos: Pos2,
+}
+
+/// O(1) reverse lookup from NetworkId to the corresponding Bevy Entity.
+/// Covers all networked entities, not just players.
 #[derive(Resource, Default)]
-pub struct PlayerRegistry(pub HashMap<NetworkId, Entity>);
+pub struct EntityRegistry(pub HashMap<NetworkId, Entity>);
+
 
 /// Spawn function signature: given Commands, the entity, its initial position,
 /// and the owner's client id (if any), attach whatever components are needed.

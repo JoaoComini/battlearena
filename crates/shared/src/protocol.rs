@@ -7,7 +7,6 @@ use crate::{tick::TickNumber, types::{NetworkId, PlayerState, Pos2, PrefabId}};
 pub enum C2S {
     /// Sent every tick as an unreliable datagram.
     /// `pos` is the position the client computed *after* applying `input` at `tick`.
-    /// The server uses it to detect mispredictions.
     InputTick { tick: TickNumber, input: InputBits, pos: Pos2 },
 }
 
