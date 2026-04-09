@@ -2,12 +2,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::{tick::TickNumber, types::{NetworkId, PlayerState, Pos2, PrefabId}};
 
+/// A single client move: the input held from the previous move up to and
+/// including `tick`, and the predicted position after simulating `tick`.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct MoveInput {
+    pub tick: TickNumber,
+    pub input: InputBits,
+    pub pos: Pos2,
+}
+
 /// Client-to-Server messages.
 #[derive(Debug, Serialize, Deserialize)]
 pub enum C2S {
-    /// Sent every tick as an unreliable datagram.
-    /// `pos` is the position the client computed *after* applying `input` at `tick`.
-    InputTick { tick: TickNumber, input: InputBits, pos: Pos2 },
+    /// Sent every fixed tick as an unreliable datagram.
+    /// `current` is the latest move (may span multiple ticks with the same input).
+    /// `old_move` is the oldest unacknowledged direction change, piggybacked for
+    /// loss recovery.
+    InputTick { current: MoveInput, old: Option<MoveInput> },
 }
 
 /// Server-to-Client messages.
@@ -21,11 +32,16 @@ pub enum S2C {
     EntityDespawned { id: NetworkId },
 
     /// Sent every server tick as an unreliable datagram to all clients.
-    WorldSnapshot { tick: TickNumber, players: Vec<PlayerState> },
+    /// `server_time` is the server's elapsed time in seconds at the moment of broadcast.
+    WorldSnapshot { server_time: f64, players: Vec<PlayerState> },
 
     /// Sent on the reliable channel when the server detects a misprediction.
     /// The client must snap to `pos` at `tick` and re-simulate its input buffer.
     Correction { tick: TickNumber, pos: Pos2 },
+
+    /// Sent on the reliable channel when the server has processed a client's input
+    /// and the prediction was correct. The client can trim history up to this tick.
+    Ack { tick: TickNumber },
 }
 
 /// Packed bitfield for directional movement input. One byte on the wire.

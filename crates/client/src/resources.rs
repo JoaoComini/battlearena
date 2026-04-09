@@ -42,10 +42,12 @@ pub struct InputHistory(pub VecDeque<(TickNumber, InputBits, Pos2)>);
 pub struct SnapshotBuffer(pub VecDeque<(f64, Pos2)>);
 
 impl SnapshotBuffer {
-    /// Maximum number of snapshots to retain.
     const CAP: usize = 32;
 
     pub fn push(&mut self, elapsed: f64, pos: Pos2) {
+        if self.0.back().map_or(false, |(t, _)| *t >= elapsed) {
+            return;
+        }
         self.0.push_back((elapsed, pos));
         if self.0.len() > Self::CAP {
             self.0.pop_front();
@@ -75,6 +77,35 @@ impl SnapshotBuffer {
             x: p0.x + (p1.x - p0.x) * frac,
             y: p0.y + (p1.y - p0.y) * frac,
         })
+    }
+}
+
+/// Smoothed estimate of the offset between server time and client time.
+/// `estimated_server_time = client_now + offset`
+///
+/// Updated every time a WorldSnapshot arrives. The smoothing factor prevents
+/// jitter from individual late or early packets from causing visible jumps.
+#[derive(Resource, Default)]
+pub struct ServerTime {
+    pub offset: f64,
+    pub initialized: bool,
+}
+
+impl ServerTime {
+    const SMOOTH: f64 = 0.05;
+
+    pub fn update(&mut self, server_time: f64, client_now: f64) {
+        let sample = server_time - client_now;
+        if !self.initialized {
+            self.offset = sample;
+            self.initialized = true;
+        } else {
+            self.offset += (sample - self.offset) * Self::SMOOTH;
+        }
+    }
+
+    pub fn estimate(&self, client_now: f64) -> f64 {
+        client_now + self.offset
     }
 }
 

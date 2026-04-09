@@ -5,11 +5,11 @@ use bevy_renet::{
 };
 use shared::{
     logic::apply_input,
-    protocol::{C2S, S2C},
+    protocol::{C2S, MoveInput, S2C},
     types::{NetworkId, PlayerState, Pos2, PrefabId},
 };
 
-use crate::resources::{CurrentTick, InputEntry, InputQueue, EntityRegistry, Position};
+use crate::resources::{InputQueue, EntityRegistry, Position};
 
 /// How far the client-reported position may differ from the server's before
 /// a correction is issued (squared, in world units).
@@ -25,8 +25,7 @@ pub struct PendingDespawn;
 #[derive(Component)]
 pub struct PendingWelcome;
 
-/// The tick number the server last simulated for this player.
-/// Sent back in WorldSnapshot so clients know what has been authoritative.
+/// The last tick simulated for this player. Used to reject stale inputs.
 #[derive(Component, Default)]
 pub struct LastSimulatedTick(pub shared::tick::TickNumber);
 
@@ -62,52 +61,68 @@ pub fn handle_server_events(
     }
 }
 
-/// Reads InputTick messages from all clients and enqueues them in tick order.
+/// Reads InputTick messages from all clients and enqueues them in tick order,
+/// rejecting ticks already simulated. Also enqueues piggybacked old moves.
 pub fn receive_inputs(
     mut server: ResMut<RenetServer>,
     registry: Res<EntityRegistry>,
-    mut queues: Query<&mut InputQueue>,
+    mut queues: Query<(&mut InputQueue, &LastSimulatedTick)>,
 ) {
     for client_id in server.clients_id() {
         let id = NetworkId(client_id);
         let Some(&entity) = registry.0.get(&id) else { continue };
-        let Ok(mut queue) = queues.get_mut(entity) else { continue };
+        let Ok((mut queue, last_simulated)) = queues.get_mut(entity) else { continue };
 
         while let Some(msg) = server.receive_message(client_id, DefaultChannel::Unreliable) {
-            if let Ok(C2S::InputTick { tick, input, pos: client_pos }) = postcard::from_bytes(&msg) {
-                let entry = InputEntry { tick, input, client_pos };
-                let pos = queue.0.partition_point(|e| e.tick < tick);
-                if queue.0.get(pos).map_or(true, |e| e.tick != tick) {
-                    queue.0.insert(pos, entry);
+            match postcard::from_bytes(&msg) {
+                Ok(C2S::InputTick { current, old }) => {
+                    if let Some(old_move) = old {
+                        info!("Old move received from {client_id}: tick={}", old_move.tick);
+                        enqueue_if_new(&mut queue, last_simulated, old_move, false);
+                    }
+                    enqueue_if_new(&mut queue, last_simulated, current, true);
                 }
+                Err(e) => warn!("Failed to deserialize InputTick from {client_id}: {e}"),
             }
         }
     }
 }
 
+fn enqueue_if_new(queue: &mut InputQueue, last_simulated: &LastSimulatedTick, mv: MoveInput, verify: bool) {
+    if mv.tick <= last_simulated.0 {
+        return;
+    }
+    let pos = queue.0.partition_point(|(e, _)| e.tick < mv.tick);
+    if queue.0.get(pos).map_or(true, |(e, _)| e.tick != mv.tick) {
+        queue.0.insert(pos, (mv, verify));
+    }
+}
+
 /// Drains each player's input queue, simulates movement, and issues corrections
-/// when the client-reported position diverges from the server's simulation.
+/// or acks depending on whether the client-reported position was correct.
 pub fn tick_game(
     mut server: ResMut<RenetServer>,
-    mut players: Query<(
-        &NetworkId,
-        &mut Position,
-        &mut InputQueue,
-        &mut LastSimulatedTick,
-    )>,
+    mut players: Query<(&NetworkId, &mut Position, &mut InputQueue, &mut LastSimulatedTick)>,
 ) {
-    for (net_id, mut pos, mut queue, mut last_tick) in &mut players {
+    for (net_id, mut pos, mut queue, mut last_simulated) in &mut players {
         let client_id: ClientId = net_id.0;
 
-        while let Some(entry) = queue.0.pop_front() {
-            let server_pos = apply_input(pos.0, entry.input);
-            pos.0 = server_pos;
-            last_tick.0 = entry.tick;
+        while let Some((mv, verify)) = queue.0.pop_front() {
+            // Simulate all ticks from last_simulated+1 up to mv.tick.
+            let steps = mv.tick.saturating_sub(last_simulated.0);
+            for _ in 0..steps {
+                pos.0 = apply_input(pos.0, mv.input);
+            }
+            last_simulated.0 = mv.tick;
 
-            let dx = server_pos.x - entry.client_pos.x;
-            let dy = server_pos.y - entry.client_pos.y;
-            if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
-                let msg = S2C::Correction { tick: entry.tick, pos: server_pos };
+            if verify {
+                let dx = pos.0.x - mv.pos.x;
+                let dy = pos.0.y - mv.pos.y;
+                let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
+                    S2C::Correction { tick: mv.tick, pos: pos.0 }
+                } else {
+                    S2C::Ack { tick: mv.tick }
+                };
                 if let Ok(bytes) = postcard::to_allocvec(&msg) {
                     server.send_message(client_id, DefaultChannel::ReliableOrdered, bytes);
                 }
@@ -119,19 +134,15 @@ pub fn tick_game(
 /// Broadcasts the full world snapshot to all clients.
 pub fn broadcast_state(
     mut server: ResMut<RenetServer>,
-    tick: Res<CurrentTick>,
-    players: Query<(&NetworkId, &Position, &LastSimulatedTick)>,
+    time: Res<Time<Real>>,
+    players: Query<(&NetworkId, &Position)>,
 ) {
     let snapshot: Vec<PlayerState> = players
         .iter()
-        .map(|(net_id, pos, last_tick)| PlayerState {
-            id: *net_id,
-            pos: pos.0,
-            ack_tick: last_tick.0,
-        })
+        .map(|(net_id, pos)| PlayerState { id: *net_id, pos: pos.0 })
         .collect();
 
-    let msg = S2C::WorldSnapshot { tick: tick.0, players: snapshot };
+    let msg = S2C::WorldSnapshot { server_time: time.elapsed_secs_f64(), players: snapshot };
     if let Ok(bytes) = postcard::to_allocvec(&msg) {
         server.broadcast_message(DefaultChannel::Unreliable, bytes);
     }
@@ -182,6 +193,3 @@ pub fn broadcast_despawn(
     }
 }
 
-pub fn advance_tick(mut tick: ResMut<CurrentTick>) {
-    tick.0 = tick.0.wrapping_add(1);
-}

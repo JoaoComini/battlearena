@@ -2,15 +2,15 @@ use bevy::prelude::*;
 use bevy_renet::{renet::DefaultChannel, RenetClient};
 use shared::{
     logic::apply_input,
-    protocol::{C2S, InputBits, S2C},
+    protocol::{C2S, InputBits, MoveInput, S2C},
     tick::TickNumber,
-    types::{NetworkId, PrefabId},
+    types::PrefabId,
 };
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use crate::resources::{
-    CurrentInput, InputHistory, LocalClientId, LocalPlayer, PendingCorrection, EntityRegistry,
-    PredictedPosition, PreviousPredictedPosition, SnapshotBuffer, SpawnRegistry,
+    CurrentInput, EntityRegistry, InputHistory, LocalClientId, LocalPlayer, PendingCorrection,
+    PredictedPosition, PreviousPredictedPosition, ServerTime, SnapshotBuffer, SpawnRegistry,
 };
 
 static TICK: AtomicU32 = AtomicU32::new(0);
@@ -71,10 +71,8 @@ pub fn setup_scene(
                 Transform::from_translation(Vec3::new(pos.x, 20.0, -pos.y)),
             ));
         } else {
-            let mut buf = SnapshotBuffer::default();
-            buf.push(0.0, pos);
             commands.entity(entity).insert((
-                buf,
+                SnapshotBuffer::default(),
                 Mesh3d(capsule.clone()),
                 MeshMaterial3d(remote_mat.clone()),
                 Transform::from_translation(Vec3::new(pos.x, 20.0, -pos.y)),
@@ -95,13 +93,14 @@ pub fn recv_reliable(
     mut client: ResMut<RenetClient>,
     mut registry: ResMut<EntityRegistry>,
     spawn_registry: Res<SpawnRegistry>,
-    local: Query<Entity, With<LocalPlayer>>,
+    mut local: Query<(Entity, &mut InputHistory), With<LocalPlayer>>,
 ) {
     let mut messages = Vec::new();
     while let Some(msg) = client.receive_message(DefaultChannel::ReliableOrdered) {
         messages.push(msg);
     }
 
+    let mut latest_ack: Option<TickNumber> = None;
     let mut latest_correction: Option<(TickNumber, shared::types::Pos2)> = None;
 
     for msg in messages {
@@ -124,16 +123,35 @@ pub fn recv_reliable(
                 }
             }
             Ok(S2C::Correction { tick, pos }) => {
+                info!("Correction received: tick={tick}, pos=({}, {})", pos.x, pos.y);
                 if latest_correction.map_or(true, |(t, _)| tick > t) {
                     latest_correction = Some((tick, pos));
+                }
+            }
+            Ok(S2C::Ack { tick }) => {
+                if latest_ack.map_or(true, |t| tick > t) {
+                    latest_ack = Some(tick);
                 }
             }
             _ => {}
         }
     }
 
-    if let Some((tick, pos)) = latest_correction {
-        if let Ok(entity) = local.single() {
+    // The effective ack is the highest tick confirmed by either Ack or Correction.
+    let ack_tick = match (latest_ack, latest_correction.map(|(t, _)| t)) {
+        (Some(a), Some(c)) => Some(a.max(c)),
+        (Some(a), None) => Some(a),
+        (None, Some(c)) => Some(c),
+        (None, None) => None,
+    };
+
+    if let Ok((entity, mut history)) = local.single_mut() {
+        if let Some(ack) = ack_tick {
+            while history.0.front().map_or(false, |(t, _, _)| *t <= ack) {
+                history.0.pop_front();
+            }
+        }
+        if let Some((tick, pos)) = latest_correction {
             commands.entity(entity).insert(PendingCorrection { tick, pos });
         }
     }
@@ -201,55 +219,47 @@ pub fn send_input_tick(
     predicted.0 = apply_input(predicted.0, input.0);
 
     history.0.push_back((tick, input.0, predicted.0));
-    if history.0.len() > 256 {
+    if history.0.len() > 64 {
         history.0.pop_front();
     }
 
-    let msg = C2S::InputTick { tick, input: input.0, pos: predicted.0 };
+    let current = MoveInput { tick, input: input.0, pos: predicted.0 };
+
+    // Find the oldest unacknowledged direction change for loss recovery.
+    // We want the first tick of the new direction, not the last tick of the old one.
+    let old = history.0.iter().zip(history.0.iter().skip(1))
+        .find(|((_, prev_input, _), (_, cur_input, _))| prev_input.0 != cur_input.0)
+        .map(|(_, (old_tick, old_input, old_pos))| MoveInput {
+            tick: *old_tick,
+            input: *old_input,
+            pos: *old_pos,
+        });
+
+    let msg = C2S::InputTick { current, old };
     if let Ok(bytes) = postcard::to_allocvec(&msg) {
         client.send_message(DefaultChannel::Unreliable, bytes);
     }
 }
 
-/// Receives WorldSnapshots, timestamps them with client real time, pushes into
-/// each entity's SnapshotBuffer, and trims acknowledged history for the local player.
+/// Receives WorldSnapshots, updates the ServerTime offset estimate, and pushes
+/// positions into each entity's SnapshotBuffer keyed by server timestamp.
 pub fn recv_world_state(
     mut client: ResMut<RenetClient>,
     registry: Res<EntityRegistry>,
     time: Res<Time<bevy::prelude::Real>>,
+    mut server_time: ResMut<ServerTime>,
     mut buffers: Query<&mut SnapshotBuffer>,
-    mut local: Query<(&NetworkId, &mut InputHistory), With<LocalPlayer>>,
 ) {
-    let receive_time = time.elapsed_secs_f64();
+    let client_now = time.elapsed_secs_f64();
 
-    // Collect all snapshots received this fixed step.
-    let mut snapshots: Vec<(u32, Vec<shared::types::PlayerState>)> = Vec::new();
     while let Some(msg) = client.receive_message(DefaultChannel::Unreliable) {
-        if let Ok(S2C::WorldSnapshot { tick, players }) = postcard::from_bytes(&msg) {
-            snapshots.push((tick, players));
-        }
-    }
-
-    // Sort by tick so older snapshots get pushed first.
-    snapshots.sort_unstable_by_key(|(tick, _)| *tick);
-
-    for (_tick, players) in &snapshots {
-        for state in players {
-            if let Some(&entity) = registry.0.get(&state.id) {
-                if let Ok(mut buf) = buffers.get_mut(entity) {
-                    buf.push(receive_time, state.pos);
-                }
-            }
-        }
-    }
-
-    // Trim history for the local player using the latest snapshot's ack_tick.
-    if let Some((_tick, players)) = snapshots.last() {
-        if let Ok((local_id, mut history)) = local.single_mut() {
-            if let Some(local_state) = players.iter().find(|s| s.id == *local_id) {
-                let ack = local_state.ack_tick;
-                while history.0.front().map_or(false, |(t, _, _)| *t <= ack) {
-                    history.0.pop_front();
+        if let Ok(S2C::WorldSnapshot { server_time: st, players }) = postcard::from_bytes(&msg) {
+            server_time.update(st, client_now);
+            for state in &players {
+                if let Some(&entity) = registry.0.get(&state.id) {
+                    if let Ok(mut buf) = buffers.get_mut(entity) {
+                        buf.push(st, state.pos);
+                    }
                 }
             }
         }
@@ -257,18 +267,19 @@ pub fn recv_world_state(
 }
 
 /// Updates each player's Transform.
-/// Remote players: snapshot interpolation at (server_time - INTERP_DELAY).
+/// Remote players: snapshot interpolation at (estimated_server_now - INTERP_DELAY).
 /// Local player: predicted position interpolated over the fixed-timestep overshoot.
 pub fn render_players(
     time: Res<Time<bevy::prelude::Real>>,
     fixed_time: Res<Time<Fixed>>,
+    server_time: Res<ServerTime>,
     mut remote: Query<(&SnapshotBuffer, &mut Transform), Without<LocalPlayer>>,
     mut local: Query<
         (&PredictedPosition, &PreviousPredictedPosition, &mut Transform),
         With<LocalPlayer>,
     >,
 ) {
-    let interp_target = time.elapsed_secs_f64() - shared::tick::INTERP_DELAY;
+    let interp_target = server_time.estimate(time.elapsed_secs_f64()) - shared::tick::INTERP_DELAY;
     for (buf, mut transform) in &mut remote {
         if let Some(pos) = buf.sample(interp_target) {
             transform.translation = Vec3::new(pos.x, 20.0, -pos.y);

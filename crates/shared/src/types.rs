@@ -29,7 +29,4 @@ impl Pos2 {
 pub struct PlayerState {
     pub id: NetworkId,
     pub pos: Pos2,
-    /// The last client input tick the server processed for this player.
-    /// Used by the client to know which inputs to drop from prediction history.
-    pub ack_tick: crate::tick::TickNumber,
 }

@@ -40,6 +40,7 @@ fn main() {
 
     App::new()
         .add_plugins(MinimalPlugins)
+        .add_plugins(bevy::log::LogPlugin::default())
         .add_plugins(RenetServerPlugin)
         .add_plugins(NetcodeServerPlugin)
         .insert_resource(server)
