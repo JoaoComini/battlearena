@@ -1,3 +1,4 @@
+use avian2d::prelude::Position;
 use bevy::prelude::*;
 use shared::types::Pos2;
 
@@ -10,16 +11,17 @@ pub fn render_players(
     time: Res<Time<bevy::prelude::Real>>,
     fixed_time: Res<Time<Fixed>>,
     server_time: Res<ServerTime>,
-    mut remote: Query<(&SnapshotBuffer, &mut Transform), Without<LocalPlayer>>,
+    mut remote: Query<(&SnapshotBuffer, &mut Transform, &mut Position), Without<LocalPlayer>>,
     mut local: Query<
         (&PredictedPosition, &PreviousPredictedPosition, &mut Transform),
         With<LocalPlayer>,
     >,
 ) {
     let interp_target = server_time.estimate(time.elapsed_secs_f64()) - shared::tick::INTERP_DELAY;
-    for (buf, mut transform) in &mut remote {
+    for (buf, mut transform, mut position) in &mut remote {
         if let Some(pos) = buf.sample(interp_target) {
             transform.translation = Vec3::new(pos.x, 20.0, -pos.y);
+            position.0 = Vec2::new(pos.x, pos.y);
         }
     }
 

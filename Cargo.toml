@@ -13,7 +13,9 @@ version = "0.1.0"
 [workspace.dependencies]
 serde = { version = "1.0", features = ["derive"] }
 postcard = { version = "1.1", features = ["alloc"] }
-bevy = "0.18"
+bevy = { version = "0.18", features = ["bevy_asset"]}
 bevy_ecs = "0.18"
+bevy_math = "0.18"
+avian2d = "0.6.1"
 
 shared = { path = "crates/shared" }

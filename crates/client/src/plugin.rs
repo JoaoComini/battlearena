@@ -4,7 +4,7 @@ use crate::{
     game::{
         input::capture_input,
         net::{recv_server, send_input_tick},
-        prediction::{apply_correction, tick_prediction},
+        prediction::{apply_client_pending_positions, apply_correction, tick_prediction},
         render::render_players,
         scene::setup_scene,
     },
@@ -32,12 +32,13 @@ impl Plugin for ClientGamePlugin {
                 Update,
                 (
                     apply_correction,
+                    apply_client_pending_positions,
                     render_players,
-                ),
+                ).chain(),
             )
             .add_systems(
                 FixedUpdate,
-                (tick_prediction, send_input_tick)
+                (tick_prediction, apply_client_pending_positions, send_input_tick)
                     .chain()
                     .run_if(bevy_renet::client_connected),
             );

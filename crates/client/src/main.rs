@@ -4,6 +4,7 @@ mod resources;
 
 use std::{net::UdpSocket, time::SystemTime};
 
+use avian2d::prelude::PhysicsPlugins;
 use bevy::prelude::*;
 use bevy_renet::{
     netcode::{ClientAuthentication, NetcodeClientPlugin, NetcodeClientTransport},
@@ -49,6 +50,7 @@ fn main() {
         }))
         .add_plugins(RenetClientPlugin)
         .add_plugins(NetcodeClientPlugin)
+        .add_plugins(PhysicsPlugins::default())
         .insert_resource(client)
         .insert_resource(transport)
         .insert_resource(resources::LocalClientId(client_id))

@@ -9,3 +9,4 @@ bevy_renet = "4.0.1"
 postcard.workspace = true
 serde.workspace = true
 shared.workspace = true
+avian2d.workspace = true

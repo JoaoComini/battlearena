@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use shared::{protocol::MoveInput, types::{NetworkId, Pos2}};
 
 #[derive(Component)]
-pub struct Position(pub Pos2);
+pub struct PlayerPosition(pub Pos2);
 
 /// Ordered queue of inputs received from the client, sorted by tick ascending.
 /// The bool indicates whether to verify the client pos and send ack/correction.

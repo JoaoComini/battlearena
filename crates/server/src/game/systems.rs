@@ -1,15 +1,17 @@
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_renet::{
     renet::{ClientId, DefaultChannel, ServerEvent},
     RenetServer, RenetServerEvent,
 };
 use shared::{
-    logic::apply_input,
+    logic::{apply_input, PLAYER_RADIUS},
     protocol::{C2S, MoveInput, S2C},
+    tick::TICK_DELTA,
     types::{NetworkId, PlayerState, Pos2, PrefabId},
 };
 
-use crate::resources::{InputQueue, EntityRegistry, Position};
+use crate::resources::{InputQueue, EntityRegistry, PlayerPosition};
 
 /// How far the client-reported position may differ from the server's before
 /// a correction is issued (squared, in world units).
@@ -29,6 +31,11 @@ pub struct PendingWelcome;
 #[derive(Component, Default)]
 pub struct LastSimulatedTick(pub shared::tick::TickNumber);
 
+/// Computed position from tick_game, applied to Position in a follow-up system
+/// to avoid conflicting queries with MoveAndSlide.
+#[derive(Component)]
+pub struct PendingPosition(pub Vec2);
+
 /// Triggered by bevy_renet when a client connects or disconnects.
 pub fn handle_server_events(
     event: On<RenetServerEvent>,
@@ -43,10 +50,14 @@ pub fn handle_server_events(
             let entity = commands.spawn((
                 id,
                 PLAYER_PREFAB,
-                Position(Pos2::ZERO),
+                PlayerPosition(Pos2::ZERO),
                 InputQueue::default(),
                 LastSimulatedTick::default(),
                 PendingWelcome,
+                RigidBody::Kinematic,
+                Position(Vec2::ZERO),
+                Collider::circle(PLAYER_RADIUS),
+                CustomPositionIntegration,
             )).id();
             registry.0.insert(id, entity);
         }
@@ -98,28 +109,36 @@ fn enqueue_if_new(queue: &mut InputQueue, last_simulated: &LastSimulatedTick, mv
     }
 }
 
-/// Drains each player's input queue, simulates movement, and issues corrections
-/// or acks depending on whether the client-reported position was correct.
+/// Drains each player's input queue and simulates movement via avian MoveAndSlide.
+/// Writes the resulting position to `PendingPosition` (applied in `apply_pending_positions`)
+/// to avoid conflicting `&mut Position` access with MoveAndSlide's internal queries.
+/// Issues corrections or acks based on client-reported position.
 pub fn tick_game(
     mut server: ResMut<RenetServer>,
-    mut players: Query<(&NetworkId, &mut Position, &mut InputQueue, &mut LastSimulatedTick)>,
+    mut commands: Commands,
+    move_and_slide: MoveAndSlide,
+    mut players: Query<(Entity, &NetworkId, &mut PlayerPosition, &Position, &Collider, &mut InputQueue, &mut LastSimulatedTick)>,
 ) {
-    for (net_id, mut pos, mut queue, mut last_simulated) in &mut players {
+    let delta = std::time::Duration::from_secs_f32(TICK_DELTA);
+
+    for (entity, net_id, mut player_pos, position, collider, mut queue, mut last_simulated) in &mut players {
         let client_id: ClientId = net_id.0;
+        let filter = SpatialQueryFilter::from_excluded_entities([entity]);
+        let mut pos = position.0;
 
         while let Some((mv, verify)) = queue.0.pop_front() {
-            // Simulate all ticks from last_simulated+1 up to mv.tick.
             let steps = mv.tick.saturating_sub(last_simulated.0);
             for _ in 0..steps {
-                pos.0 = apply_input(pos.0, mv.input);
+                pos = apply_input(&move_and_slide, collider, pos, mv.input, delta, &filter);
             }
             last_simulated.0 = mv.tick;
 
             if verify {
-                let dx = pos.0.x - mv.pos.x;
-                let dy = pos.0.y - mv.pos.y;
+                let final_pos = Pos2 { x: pos.x, y: pos.y };
+                let dx = final_pos.x - mv.pos.x;
+                let dy = final_pos.y - mv.pos.y;
                 let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
-                    S2C::Correction { tick: mv.tick, pos: pos.0 }
+                    S2C::Correction { tick: mv.tick, pos: final_pos }
                 } else {
                     S2C::Ack { tick: mv.tick }
                 };
@@ -128,6 +147,21 @@ pub fn tick_game(
                 }
             }
         }
+
+        player_pos.0 = Pos2 { x: pos.x, y: pos.y };
+        commands.entity(entity).insert(PendingPosition(pos));
+    }
+}
+
+/// Applies positions computed by tick_game to the avian Position component.
+/// Split from tick_game to avoid conflicting access with MoveAndSlide's internal queries.
+pub fn apply_pending_positions(
+    mut commands: Commands,
+    mut players: Query<(Entity, &PendingPosition, &mut Position)>,
+) {
+    for (entity, pending, mut position) in &mut players {
+        position.0 = pending.0;
+        commands.entity(entity).remove::<PendingPosition>();
     }
 }
 
@@ -135,7 +169,7 @@ pub fn tick_game(
 pub fn broadcast_state(
     mut server: ResMut<RenetServer>,
     time: Res<Time<Real>>,
-    players: Query<(&NetworkId, &Position)>,
+    players: Query<(&NetworkId, &PlayerPosition)>,
 ) {
     let snapshot: Vec<PlayerState> = players
         .iter()
@@ -155,7 +189,7 @@ pub fn send_initial_state(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     pending: Query<(Entity, &NetworkId), With<PendingWelcome>>,
-    existing: Query<(&NetworkId, &PrefabId, &Position), Without<PendingWelcome>>,
+    existing: Query<(&NetworkId, &PrefabId, &PlayerPosition), Without<PendingWelcome>>,
 ) {
     for (entity, net_id) in &pending {
         // Send EntitySpawned for every already-existing entity to the new client.
@@ -192,4 +226,3 @@ pub fn broadcast_despawn(
         commands.entity(entity).despawn();
     }
 }
-

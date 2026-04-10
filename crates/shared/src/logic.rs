@@ -1,10 +1,12 @@
-use crate::{protocol::InputBits, tick::TICK_DELTA, types::Pos2};
+use std::time::Duration;
+
+use avian2d::prelude::*;
+use crate::protocol::InputBits;
 
 pub const PLAYER_SPEED: f32 = 200.0; // world units per second
+pub const PLAYER_RADIUS: f32 = 16.0; // matches Capsule3d::new(16.0, 24.0) in scene.rs
 
-/// Pure movement integration. Called by both the server (authoritatively) and
-/// the client (for prediction). No side effects.
-pub fn apply_input(pos: Pos2, input: InputBits) -> Pos2 {
+fn input_velocity(input: InputBits) -> bevy_math::Vec2 {
     let mut dx = 0.0_f32;
     let mut dy = 0.0_f32;
 
@@ -13,55 +15,73 @@ pub fn apply_input(pos: Pos2, input: InputBits) -> Pos2 {
     if input.is_set(InputBits::UP)    { dy += 1.0; }
     if input.is_set(InputBits::DOWN)  { dy -= 1.0; }
 
-    // Normalize diagonal movement so speed is consistent in all directions.
     let len = (dx * dx + dy * dy).sqrt();
     if len > 0.0 {
         dx /= len;
         dy /= len;
     }
-
-    Pos2 {
-        x: pos.x + dx * PLAYER_SPEED * TICK_DELTA,
-        y: pos.y + dy * PLAYER_SPEED * TICK_DELTA,
-    }
+    bevy_math::Vec2::new(dx * PLAYER_SPEED, dy * PLAYER_SPEED)
 }
+
+/// Advances `position` by one physics tick given `input`, sliding along obstacles.
+/// Returns the resulting position.
+/// Called by both the server (authoritatively) and the client (for prediction).
+pub fn apply_input(
+    move_and_slide: &MoveAndSlide,
+    collider: &Collider,
+    position: bevy_math::Vec2,
+    input: InputBits,
+    delta: Duration,
+    filter: &SpatialQueryFilter,
+) -> bevy_math::Vec2 {
+    let velocity = input_velocity(input);
+
+    move_and_slide
+        .move_and_slide(
+            collider,
+            position,
+            0.0,
+            velocity,
+            delta,
+            &MoveAndSlideConfig::default(),
+            filter,
+            |_| MoveAndSlideHitResponse::Accept,
+        )
+        .position
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn no_input_stays_put() {
-        let pos = Pos2 { x: 10.0, y: 20.0 };
-        let result = apply_input(pos, InputBits::default());
-        assert_eq!(result.x, pos.x);
-        assert_eq!(result.y, pos.y);
+    fn no_input_zero_velocity() {
+        let vel = input_velocity(InputBits::default());
+        assert_eq!(vel.x, 0.0);
+        assert_eq!(vel.y, 0.0);
     }
 
     #[test]
-    fn right_input_increases_x() {
-        let pos = Pos2::ZERO;
+    fn right_input_positive_x_velocity() {
         let mut input = InputBits::default();
         input.set(InputBits::RIGHT);
-        let result = apply_input(pos, input);
-        assert!(result.x > 0.0);
-        assert_eq!(result.y, 0.0);
+        let vel = input_velocity(input);
+        assert!(vel.x > 0.0);
+        assert_eq!(vel.y, 0.0);
     }
 
     #[test]
     fn diagonal_speed_equals_cardinal_speed() {
         let mut cardinal = InputBits::default();
         cardinal.set(InputBits::RIGHT);
-        let cardinal_result = apply_input(Pos2::ZERO, cardinal);
+        let cardinal_vel = input_velocity(cardinal);
 
         let mut diagonal = InputBits::default();
         diagonal.set(InputBits::RIGHT);
         diagonal.set(InputBits::UP);
-        let diagonal_result = apply_input(Pos2::ZERO, diagonal);
+        let diagonal_vel = input_velocity(diagonal);
 
-        let cardinal_dist = (cardinal_result.x * cardinal_result.x + cardinal_result.y * cardinal_result.y).sqrt();
-        let diagonal_dist = (diagonal_result.x * diagonal_result.x + diagonal_result.y * diagonal_result.y).sqrt();
-
-        assert!((cardinal_dist - diagonal_dist).abs() < 1e-5);
+        assert!((cardinal_vel.length() - diagonal_vel.length()).abs() < 1e-5);
     }
 }
