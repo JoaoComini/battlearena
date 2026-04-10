@@ -122,6 +122,10 @@ pub struct PendingCorrection {
 #[derive(Resource, Default)]
 pub struct EntityRegistry(pub HashMap<NetworkId, Entity>);
 
+/// Monotonically increasing local tick counter, incremented each fixed step.
+#[derive(Resource, Default)]
+pub struct LocalTick(pub shared::tick::TickNumber);
+
 
 /// Spawn function signature: given Commands, the entity, its initial position,
 /// and the owner's client id (if any), attach whatever components are needed.

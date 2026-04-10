@@ -1,11 +1,14 @@
 use bevy::prelude::*;
 
 use crate::{
-    game::systems::{
-        apply_correction, capture_input, recv_reliable, recv_world_state, render_players,
-        send_input_tick, setup_scene,
+    game::{
+        input::capture_input,
+        net::{recv_server, send_input_tick},
+        prediction::{apply_correction, tick_prediction},
+        render::render_players,
+        scene::setup_scene,
     },
-    resources::{CurrentInput, EntityRegistry, ServerTime, SpawnRegistry},
+    resources::{CurrentInput, EntityRegistry, LocalTick, ServerTime, SpawnRegistry},
 };
 
 pub struct ClientGamePlugin;
@@ -14,22 +17,29 @@ impl Plugin for ClientGamePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<CurrentInput>()
             .init_resource::<EntityRegistry>()
+            .init_resource::<LocalTick>()
             .init_resource::<ServerTime>()
             .init_resource::<SpawnRegistry>()
             .add_systems(Startup, setup_scene)
             .add_systems(
-                Update,
+                PreUpdate,
                 (
                     capture_input,
-                    recv_reliable.run_if(bevy_renet::client_connected),
-                    recv_world_state.run_if(bevy_renet::client_connected),
-                    apply_correction.after(recv_reliable),
+                    recv_server.run_if(bevy_renet::client_connected),
+                )
+            )
+            .add_systems(
+                Update,
+                (
+                    apply_correction,
                     render_players,
                 ),
             )
             .add_systems(
                 FixedUpdate,
-                send_input_tick.run_if(bevy_renet::client_connected),
+                (tick_prediction, send_input_tick)
+                    .chain()
+                    .run_if(bevy_renet::client_connected),
             );
     }
 }
