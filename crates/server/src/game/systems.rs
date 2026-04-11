@@ -5,9 +5,8 @@ use bevy_renet::{
     RenetServer, RenetServerEvent,
 };
 use shared::{
-    logic::{apply_input, PLAYER_RADIUS},
+    physics::{PhysicsInput, PLAYER_RADIUS},
     protocol::{C2S, MoveInput, S2C},
-    tick::TICK_DELTA,
     types::{NetworkId, PlayerState, Pos2, PrefabId},
 };
 
@@ -31,10 +30,14 @@ pub struct PendingWelcome;
 #[derive(Component, Default)]
 pub struct LastSimulatedTick(pub shared::tick::TickNumber);
 
-/// Computed position from tick_game, applied to Position in a follow-up system
-/// to avoid conflicting queries with MoveAndSlide.
+/// Pending verification data: after the shared movement system runs, compare
+/// the authoritative Position against the client-reported position.
 #[derive(Component)]
-pub struct PendingPosition(pub Vec2);
+pub struct PendingVerification {
+    pub tick: shared::tick::TickNumber,
+    pub reported_pos: Pos2,
+    pub client_id: ClientId,
+}
 
 /// Triggered by bevy_renet when a client connects or disconnects.
 pub fn handle_server_events(
@@ -65,7 +68,6 @@ pub fn handle_server_events(
             info!("Player {client_id} disconnected: {reason}");
             let id = NetworkId(client_id);
             if let Some(entity) = registry.0.remove(&id) {
-                // Defer the actual despawn so broadcast_despawn can send the message first.
                 commands.entity(entity).insert(PendingDespawn);
             }
         }
@@ -109,59 +111,52 @@ fn enqueue_if_new(queue: &mut InputQueue, last_simulated: &LastSimulatedTick, mv
     }
 }
 
-/// Drains each player's input queue and simulates movement via avian MoveAndSlide.
-/// Writes the resulting position to `PendingPosition` (applied in `apply_pending_positions`)
-/// to avoid conflicting `&mut Position` access with MoveAndSlide's internal queries.
-/// Issues corrections or acks based on client-reported position.
-pub fn tick_game(
-    mut server: ResMut<RenetServer>,
+/// Drains one input per player from the queue and writes PhysicsInput for the
+/// shared movement system to consume. Records PendingVerification when needed.
+pub fn prepare_physics_inputs(
     mut commands: Commands,
-    move_and_slide: MoveAndSlide,
-    mut players: Query<(Entity, &NetworkId, &mut PlayerPosition, &Position, &Collider, &mut InputQueue, &mut LastSimulatedTick)>,
+    mut players: Query<(Entity, &NetworkId, &mut InputQueue, &mut LastSimulatedTick)>,
 ) {
-    let delta = std::time::Duration::from_secs_f32(TICK_DELTA);
+    for (entity, net_id, mut queue, mut last_simulated) in &mut players {
+        let Some((mv, verify)) = queue.0.pop_front() else { continue };
 
-    for (entity, net_id, mut player_pos, position, collider, mut queue, mut last_simulated) in &mut players {
-        let client_id: ClientId = net_id.0;
-        let filter = SpatialQueryFilter::from_excluded_entities([entity]);
-        let mut pos = position.0;
+        last_simulated.0 = mv.tick;
+        commands.entity(entity).insert(PhysicsInput(mv.input));
 
-        while let Some((mv, verify)) = queue.0.pop_front() {
-            let steps = mv.tick.saturating_sub(last_simulated.0);
-            for _ in 0..steps {
-                pos = apply_input(&move_and_slide, collider, pos, mv.input, delta, &filter);
-            }
-            last_simulated.0 = mv.tick;
-
-            if verify {
-                let final_pos = Pos2 { x: pos.x, y: pos.y };
-                let dx = final_pos.x - mv.pos.x;
-                let dy = final_pos.y - mv.pos.y;
-                let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
-                    S2C::Correction { tick: mv.tick, pos: final_pos }
-                } else {
-                    S2C::Ack { tick: mv.tick }
-                };
-                if let Ok(bytes) = postcard::to_allocvec(&msg) {
-                    server.send_message(client_id, DefaultChannel::ReliableOrdered, bytes);
-                }
-            }
+        if verify {
+            commands.entity(entity).insert(PendingVerification {
+                tick: mv.tick,
+                reported_pos: mv.pos,
+                client_id: net_id.0,
+            });
         }
-
-        player_pos.0 = Pos2 { x: pos.x, y: pos.y };
-        commands.entity(entity).insert(PendingPosition(pos));
     }
 }
 
-/// Applies positions computed by tick_game to the avian Position component.
-/// Split from tick_game to avoid conflicting access with MoveAndSlide's internal queries.
-pub fn apply_pending_positions(
+/// After the shared movement system has flushed Position, compare the authoritative
+/// position against what the client reported and send Ack or Correction.
+pub fn verify_and_respond(
     mut commands: Commands,
-    mut players: Query<(Entity, &PendingPosition, &mut Position)>,
+    mut server: ResMut<RenetServer>,
+    mut players: Query<(Entity, &Position, &PendingVerification, &mut PlayerPosition)>,
 ) {
-    for (entity, pending, mut position) in &mut players {
-        position.0 = pending.0;
-        commands.entity(entity).remove::<PendingPosition>();
+    for (entity, position, verification, mut player_pos) in &mut players {
+        let server_pos = Pos2 { x: position.0.x, y: position.0.y };
+        player_pos.0 = server_pos;
+
+        let dx = server_pos.x - verification.reported_pos.x;
+        let dy = server_pos.y - verification.reported_pos.y;
+        let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
+            S2C::Correction { tick: verification.tick, pos: server_pos }
+        } else {
+            S2C::Ack { tick: verification.tick }
+        };
+
+        if let Ok(bytes) = postcard::to_allocvec(&msg) {
+            server.send_message(verification.client_id, DefaultChannel::ReliableOrdered, bytes);
+        }
+
+        commands.entity(entity).remove::<PendingVerification>();
     }
 }
 
@@ -192,7 +187,6 @@ pub fn send_initial_state(
     existing: Query<(&NetworkId, &PrefabId, &PlayerPosition), Without<PendingWelcome>>,
 ) {
     for (entity, net_id) in &pending {
-        // Send EntitySpawned for every already-existing entity to the new client.
         for (existing_id, prefab, pos) in &existing {
             let owner = Some(existing_id.0);
             let msg = S2C::EntitySpawned { id: *existing_id, prefab: *prefab, pos: pos.0, owner };
@@ -201,7 +195,6 @@ pub fn send_initial_state(
             }
         }
 
-        // Send this player's own EntitySpawned to them and broadcast to all others.
         let owner = Some(net_id.0);
         let spawned = S2C::EntitySpawned { id: *net_id, prefab: PLAYER_PREFAB, pos: Pos2::ZERO, owner };
         if let Ok(bytes) = postcard::to_allocvec(&spawned) {

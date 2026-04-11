@@ -14,7 +14,7 @@ pub struct PrefabId(pub u16);
 pub struct NetworkId(pub u64);
 
 /// 2D position in world-space units.
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Pos2 {
     pub x: f32,
     pub y: f32,

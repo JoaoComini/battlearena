@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use shared::{
-    logic::apply_input,
+    physics::{apply_movement_input, PhysicsInput, PendingPosition},
     tick::TICK_DELTA,
     types::Pos2,
 };
@@ -11,63 +11,30 @@ use crate::resources::{
     PreviousPredictedPosition,
 };
 
-/// Computed position pending write-back to avian's Position component.
-/// Split from tick_prediction/apply_correction to avoid conflicting access with MoveAndSlide.
-#[derive(Component)]
-pub struct ClientPendingPosition(pub Vec2);
-
-/// Each fixed tick: advance the local simulation via MoveAndSlide and save to history.
+/// Each fixed tick: record input and hand off to the shared movement system.
 pub fn tick_prediction(
     mut commands: Commands,
     input: Res<CurrentInput>,
     mut local_tick: ResMut<LocalTick>,
-    move_and_slide: MoveAndSlide,
     mut local: Query<
-        (
-            Entity,
-            &Collider,
-            &Position,
-            &mut PredictedPosition,
-            &mut PreviousPredictedPosition,
-            &mut InputHistory,
-        ),
+        (Entity, &mut InputHistory),
         With<LocalPlayer>,
     >,
 ) {
-    let Ok((entity, collider, position, mut predicted, mut prev_predicted, mut history)) =
-        local.single_mut()
-    else {
+    let Ok((entity, mut history)) = local.single_mut() else {
         return;
     };
 
     let tick = local_tick.0;
     local_tick.0 += 1;
 
-    let filter = SpatialQueryFilter::from_excluded_entities([entity]);
-    let new_pos_vec = apply_input(
-        &move_and_slide,
-        collider,
-        position.0,
-        input.0,
-        std::time::Duration::from_secs_f32(TICK_DELTA),
-        &filter,
-    );
-
-    let new_pos = Pos2 {
-        x: new_pos_vec.x,
-        y: new_pos_vec.y,
-    };
-    prev_predicted.0 = predicted.0;
-    predicted.0 = new_pos;
-
-    history.0.push_back((tick, input.0, new_pos));
+    // Push placeholder position — filled in by update_predicted_position after flush.
+    history.0.push_back((tick, input.0, Pos2::ZERO));
     if history.0.len() > 64 {
         history.0.pop_front();
     }
 
-    commands
-        .entity(entity)
-        .insert(ClientPendingPosition(new_pos_vec));
+    commands.entity(entity).insert(PhysicsInput(input.0));
 }
 
 /// Consumes a PendingCorrection on the local player, re-simulates from the
@@ -79,7 +46,6 @@ pub fn apply_correction(
         (
             Entity,
             &Collider,
-            &Position,
             &mut PredictedPosition,
             &mut PreviousPredictedPosition,
             &InputHistory,
@@ -88,7 +54,7 @@ pub fn apply_correction(
         With<LocalPlayer>,
     >,
 ) {
-    let Ok((entity, collider, _position, mut predicted, mut prev_predicted, history, correction)) =
+    let Ok((entity, collider, mut predicted, mut prev_predicted, history, correction)) =
         local.single_mut()
     else {
         return;
@@ -100,7 +66,7 @@ pub fn apply_correction(
     let mut pos = Vec2::new(correction.pos.x, correction.pos.y);
     for (tick, input, _) in &history.0 {
         if *tick > correction.tick {
-            pos = apply_input(&move_and_slide, collider, pos, *input, delta, &filter);
+            pos = apply_movement_input(&move_and_slide, collider, pos, *input, delta, &filter);
         }
     }
 
@@ -108,18 +74,43 @@ pub fn apply_correction(
     prev_predicted.0 = new_pos;
     predicted.0 = new_pos;
 
-    commands.entity(entity).insert(ClientPendingPosition(pos));
+    // Write re-simulated position directly — shared apply_pending_positions will flush it.
+    commands.entity(entity).insert(PendingPosition(pos));
     commands.entity(entity).remove::<PendingCorrection>();
+    // Remove any PhysicsInput written by tick_prediction this frame so the movement
+    // system doesn't overwrite the correction result with a stale step.
+    commands.entity(entity).remove::<PhysicsInput>();
 }
 
-/// Applies positions computed by tick_prediction/apply_correction to avian's Position component.
-/// Split to avoid conflicting &mut Position access with MoveAndSlide's internal queries.
-pub fn apply_client_pending_positions(
-    mut commands: Commands,
-    mut players: Query<(Entity, &ClientPendingPosition, &mut Position)>,
+/// After apply_pending_positions has flushed Position, sync PredictedPosition
+/// and fix the placeholder in the last InputHistory entry.
+pub fn update_predicted_position(
+    mut local: Query<
+        (
+            &Position,
+            &mut PredictedPosition,
+            &mut PreviousPredictedPosition,
+            &mut InputHistory,
+        ),
+        With<LocalPlayer>,
+    >,
 ) {
-    for (entity, pending, mut position) in &mut players {
-        position.0 = pending.0;
-        commands.entity(entity).remove::<ClientPendingPosition>();
+    let Ok((position, mut predicted, mut prev_predicted, mut history)) = local.single_mut() else {
+        return;
+    };
+
+    let new_pos = Pos2 { x: position.0.x, y: position.0.y };
+
+    // Only update prev/predicted on normal prediction ticks (not after correction,
+    // which already set them). We detect a correction tick by checking if predicted
+    // already matches the new position (correction set it before flush).
+    if predicted.0 != new_pos {
+        prev_predicted.0 = predicted.0;
+        predicted.0 = new_pos;
+    }
+
+    // Fix the placeholder Pos2::ZERO in the last history entry.
+    if let Some(back) = history.0.back_mut() {
+        back.2 = new_pos;
     }
 }

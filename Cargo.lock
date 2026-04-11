@@ -5089,6 +5089,7 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "avian2d",
+ "bevy_app",
  "bevy_ecs",
  "bevy_math",
  "postcard",

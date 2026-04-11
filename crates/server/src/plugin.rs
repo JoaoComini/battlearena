@@ -1,12 +1,15 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_renet::RenetServer;
-use shared::map::MAP_OBSTACLES;
+use shared::{
+    map::MAP_OBSTACLES,
+    physics::{PhysicsMovementSet, PlayerMovementPlugin},
+};
 
 use crate::{
     game::systems::{
-        apply_pending_positions, broadcast_despawn, broadcast_state, handle_server_events,
-        receive_inputs, send_initial_state, tick_game,
+        broadcast_despawn, broadcast_state, handle_server_events,
+        prepare_physics_inputs, receive_inputs, send_initial_state, verify_and_respond,
     },
     resources::EntityRegistry,
 };
@@ -25,13 +28,22 @@ pub struct ServerGamePlugin;
 
 impl Plugin for ServerGamePlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<EntityRegistry>()
+        app.add_plugins(PlayerMovementPlugin)
+            .init_resource::<EntityRegistry>()
             .add_observer(handle_server_events)
             .add_systems(Startup, spawn_obstacles)
             .add_systems(
                 FixedUpdate,
-                (send_initial_state, broadcast_despawn, receive_inputs, tick_game, apply_pending_positions, broadcast_state)
+                (send_initial_state, broadcast_despawn, receive_inputs, prepare_physics_inputs)
                     .chain()
+                    .in_set(PhysicsMovementSet::PrepareInput)
+                    .run_if(resource_exists::<RenetServer>),
+            )
+            .add_systems(
+                FixedUpdate,
+                (verify_and_respond, broadcast_state)
+                    .chain()
+                    .in_set(PhysicsMovementSet::Flush)
                     .run_if(resource_exists::<RenetServer>),
             );
     }

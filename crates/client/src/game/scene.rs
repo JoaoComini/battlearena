@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use shared::{
-    logic::PLAYER_RADIUS,
+    physics::PLAYER_RADIUS,
     map::MAP_OBSTACLES,
     types::{Pos2, PrefabId},
 };
