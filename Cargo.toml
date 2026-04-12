@@ -1,19 +1,46 @@
-[workspace]
-resolver = "2"
-members = [
-    "crates/shared",
-    "crates/server",
-    "crates/client",
-]
-
-[workspace.package]
-edition = "2021"
+[package]
+name = "battlearena"
 version = "0.1.0"
+edition = "2021"
 
-[workspace.dependencies]
+[[bin]]
+name = "battlearena"
+doc = false
+
+[lib]
+doc = false
+
+[features]
+default = ["client", "server"]
+client  = ["gui", "netcode", "udp", "lightyear/client", "lightyear/input_native", "lightyear/prediction"]
+gui     = ["bevy/bevy_pbr", "bevy/bevy_render", "bevy/bevy_winit", "bevy/bevy_gizmos"]
+server  = ["netcode", "udp", "lightyear/server"]
+netcode = ["lightyear/netcode"]
+udp     = ["lightyear/udp"]
+
+[dependencies]
+lightyear = { version = "0.26.4", default-features = false, features = [
+    "interpolation",
+    "prediction",
+    "replication",
+    "input_native",
+] }
+bevy = { version = "0.18", default-features = false, features = [
+    "bevy_log",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_state",
+    "std",
+    "multi_threaded",
+    "keyboard",
+    "x11",
+] }
 serde = { version = "1.0", features = ["derive"] }
-postcard = { version = "1.1", features = ["alloc"] }
-bevy = "0.18"
-bevy_ecs = "0.18"
+clap = { version = "4", features = ["derive"] }
+cfg-if = "1"
 
-shared = { path = "crates/shared" }
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1
