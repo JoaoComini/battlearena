@@ -1,6 +1,10 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{tick::TickNumber, types::{NetworkId, PlayerState, Pos2, PrefabId}};
+use crate::{
+    components::{NetworkId, PrefabId},
+    tick::TickNumber,
+    types::{PlayerState, Pos2},
+};
 
 /// A single client move: the input held from the previous move up to and
 /// including `tick`, and the predicted position after simulating `tick`.

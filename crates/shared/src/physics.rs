@@ -3,9 +3,12 @@ use std::time::Duration;
 use avian2d::prelude::*;
 use bevy_app::prelude::*;
 use bevy_ecs::prelude::*;
+use bevy_state::app::AppExtStates;
+use bevy_state::condition::in_state;
 use bevy_math::Vec2;
 
 use crate::protocol::InputBits;
+use crate::states::AppState;
 use crate::tick::TICK_DELTA;
 
 pub const PLAYER_SPEED: f32 = 200.0; // world units per second
@@ -106,18 +109,29 @@ pub struct PlayerMovementPlugin;
 
 impl Plugin for PlayerMovementPlugin {
     fn build(&self, app: &mut App) {
-        app.configure_sets(
-            FixedUpdate,
-            (
-                PhysicsMovementSet::PrepareInput,
-                PhysicsMovementSet::Move,
-                PhysicsMovementSet::Flush,
+        app.init_state::<AppState>()
+            .configure_sets(
+                FixedUpdate,
+                (
+                    PhysicsMovementSet::PrepareInput,
+                    PhysicsMovementSet::Move,
+                    PhysicsMovementSet::Flush,
+                )
+                .chain()
+                .before(PhysicsSystems::Prepare),
             )
-            .chain()
-            .before(PhysicsSystems::Prepare),
-        )
-        .add_systems(FixedUpdate, apply_physics_movement.in_set(PhysicsMovementSet::Move))
-        .add_systems(FixedUpdate, apply_pending_positions.in_set(PhysicsMovementSet::Flush));
+            .add_systems(
+                FixedUpdate,
+                apply_physics_movement
+                    .in_set(PhysicsMovementSet::Move)
+                    .run_if(in_state(AppState::InGame)),
+            )
+            .add_systems(
+                FixedUpdate,
+                apply_pending_positions
+                    .in_set(PhysicsMovementSet::Flush)
+                    .run_if(in_state(AppState::InGame)),
+            );
     }
 }
 

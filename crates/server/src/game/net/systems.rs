@@ -1,43 +1,20 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_renet::{
-    renet::{ClientId, DefaultChannel, ServerEvent},
+    renet::{DefaultChannel, ServerEvent},
     RenetServer, RenetServerEvent,
 };
 use shared::{
-    physics::{PhysicsInput, PLAYER_RADIUS},
+    components::{NetworkId, PrefabId},
+    physics::PLAYER_RADIUS,
     protocol::{C2S, MoveInput, S2C},
-    types::{NetworkId, PlayerState, Pos2, PrefabId},
+    types::{PlayerState, Pos2},
 };
 
-use crate::resources::{InputQueue, EntityRegistry, PlayerPosition};
-
-/// How far the client-reported position may differ from the server's before
-/// a correction is issued (squared, in world units).
-const CORRECTION_EPSILON_SQ: f32 = 0.1;
-
-pub const PLAYER_PREFAB: PrefabId = PrefabId(0);
-
-/// Marker: entity is pending broadcast of EntityDespawned, then despawn.
-#[derive(Component)]
-pub struct PendingDespawn;
-
-/// Marker: this player entity has not yet been sent a Welcome message.
-#[derive(Component)]
-pub struct PendingWelcome;
-
-/// The last tick simulated for this player. Used to reject stale inputs.
-#[derive(Component, Default)]
-pub struct LastSimulatedTick(pub shared::tick::TickNumber);
-
-/// Pending verification data: after the shared movement system runs, compare
-/// the authoritative Position against the client-reported position.
-#[derive(Component)]
-pub struct PendingVerification {
-    pub tick: shared::tick::TickNumber,
-    pub reported_pos: Pos2,
-    pub client_id: ClientId,
-}
+use crate::resources::{
+    EntityRegistry, InputQueue, LastSimulatedTick, PendingDespawn, PendingWelcome, PlayerPosition,
+    PLAYER_PREFAB,
+};
 
 /// Triggered by bevy_renet when a client connects or disconnects.
 pub fn handle_server_events(
@@ -51,6 +28,7 @@ pub fn handle_server_events(
             info!("Player {client_id} connected");
             let id = NetworkId(client_id);
             let entity = commands.spawn((
+                Name::new(format!("Player_{client_id}")),
                 id,
                 PLAYER_PREFAB,
                 PlayerPosition(Pos2::ZERO),
@@ -106,57 +84,8 @@ fn enqueue_if_new(queue: &mut InputQueue, last_simulated: &LastSimulatedTick, mv
         return;
     }
     let pos = queue.0.partition_point(|(e, _)| e.tick < mv.tick);
-    if queue.0.get(pos).map_or(true, |(e, _)| e.tick != mv.tick) {
+    if queue.0.get(pos).is_none_or(|(e, _)| e.tick != mv.tick) {
         queue.0.insert(pos, (mv, verify));
-    }
-}
-
-/// Drains one input per player from the queue and writes PhysicsInput for the
-/// shared movement system to consume. Records PendingVerification when needed.
-pub fn prepare_physics_inputs(
-    mut commands: Commands,
-    mut players: Query<(Entity, &NetworkId, &mut InputQueue, &mut LastSimulatedTick)>,
-) {
-    for (entity, net_id, mut queue, mut last_simulated) in &mut players {
-        let Some((mv, verify)) = queue.0.pop_front() else { continue };
-
-        last_simulated.0 = mv.tick;
-        commands.entity(entity).insert(PhysicsInput(mv.input));
-
-        if verify {
-            commands.entity(entity).insert(PendingVerification {
-                tick: mv.tick,
-                reported_pos: mv.pos,
-                client_id: net_id.0,
-            });
-        }
-    }
-}
-
-/// After the shared movement system has flushed Position, compare the authoritative
-/// position against what the client reported and send Ack or Correction.
-pub fn verify_and_respond(
-    mut commands: Commands,
-    mut server: ResMut<RenetServer>,
-    mut players: Query<(Entity, &Position, &PendingVerification, &mut PlayerPosition)>,
-) {
-    for (entity, position, verification, mut player_pos) in &mut players {
-        let server_pos = Pos2 { x: position.0.x, y: position.0.y };
-        player_pos.0 = server_pos;
-
-        let dx = server_pos.x - verification.reported_pos.x;
-        let dy = server_pos.y - verification.reported_pos.y;
-        let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
-            S2C::Correction { tick: verification.tick, pos: server_pos }
-        } else {
-            S2C::Ack { tick: verification.tick }
-        };
-
-        if let Ok(bytes) = postcard::to_allocvec(&msg) {
-            server.send_message(verification.client_id, DefaultChannel::ReliableOrdered, bytes);
-        }
-
-        commands.entity(entity).remove::<PendingVerification>();
     }
 }
 

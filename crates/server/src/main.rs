@@ -42,6 +42,7 @@ fn main() {
     App::new()
         .add_plugins(bevy::log::LogPlugin::default())
         .add_plugins(MinimalPlugins)
+        .add_plugins(bevy::state::app::StatesPlugin)
         .add_plugins(bevy::asset::AssetPlugin::default())
         .add_plugins(bevy::scene::ScenePlugin)
         .add_plugins(PhysicsPlugins::default())

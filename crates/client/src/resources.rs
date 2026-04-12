@@ -5,7 +5,8 @@ use bevy::prelude::*;
 use shared::{
     protocol::InputBits,
     tick::TickNumber,
-    types::{NetworkId, Pos2, PrefabId},
+    components::{NetworkId, PrefabId},
+    types::Pos2,
 };
 
 /// Marker component for the local player entity.
@@ -45,7 +46,7 @@ impl SnapshotBuffer {
     const CAP: usize = 32;
 
     pub fn push(&mut self, elapsed: f64, pos: Pos2) {
-        if self.0.back().map_or(false, |(t, _)| *t >= elapsed) {
+        if self.0.back().is_some_and(|(t, _)| *t >= elapsed) {
             return;
         }
         self.0.push_back((elapsed, pos));

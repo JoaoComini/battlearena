@@ -39,6 +39,7 @@ pub fn tick_prediction(
 
 /// Consumes a PendingCorrection on the local player, re-simulates from the
 /// input history using MoveAndSlide, and snaps the predicted position.
+#[allow(clippy::type_complexity)]
 pub fn apply_correction(
     mut commands: Commands,
     move_and_slide: MoveAndSlide,

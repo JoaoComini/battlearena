@@ -1,9 +1,10 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use shared::{
+    components::PrefabId,
     physics::PLAYER_RADIUS,
     map::MAP_OBSTACLES,
-    types::{Pos2, PrefabId},
+    types::Pos2,
 };
 
 use crate::resources::{
@@ -21,11 +22,13 @@ pub fn setup_scene(
     local_client_id: Res<LocalClientId>,
 ) {
     commands.spawn((
+        Name::new("Camera"),
         Camera3d::default(),
         Transform::from_xyz(0.0, 600.0, 400.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
     commands.spawn((
+        Name::new("DirectionalLight"),
         DirectionalLight {
             illuminance: 10_000.0,
             shadows_enabled: false,
@@ -35,6 +38,7 @@ pub fn setup_scene(
     ));
 
     commands.spawn((
+        Name::new("Ground"),
         Mesh3d(meshes.add(Plane3d::default().mesh().size(2000.0, 2000.0))),
         MeshMaterial3d(materials.add(StandardMaterial {
             base_color: Color::srgb(0.15, 0.15, 0.15),
@@ -47,15 +51,17 @@ pub fn setup_scene(
         ..default()
     });
 
-    for obs in MAP_OBSTACLES {
+    for (i, obs) in MAP_OBSTACLES.iter().enumerate() {
         // Visual entity — 3D rendering only, no avian components
         commands.spawn((
+            Name::new(format!("Obstacle_{i}")),
             Mesh3d(meshes.add(Cuboid::new(obs.half_x * 2.0, 60.0, obs.half_y * 2.0))),
             MeshMaterial3d(obstacle_mat.clone()),
             Transform::from_xyz(obs.center_x, 20.0, -obs.center_y),
         ));
         // Physics entity — 2D collision only, no mesh
         commands.spawn((
+            Name::new(format!("ObstacleCollider_{i}")),
             RigidBody::Static,
             Position(Vec2::new(obs.center_x, obs.center_y)),
             Collider::rectangle(obs.half_x * 2.0, obs.half_y * 2.0),
@@ -80,6 +86,7 @@ pub fn setup_scene(
             let is_local = owner == Some(my_id);
             if is_local {
                 commands.entity(entity).insert((
+                    Name::new("LocalPlayer"),
                     LocalPlayer,
                     PredictedPosition::default(),
                     PreviousPredictedPosition::default(),
@@ -89,6 +96,7 @@ pub fn setup_scene(
 
             } else {
                 commands.entity(entity).insert((
+                    Name::new(format!("RemotePlayer_{}", owner.unwrap_or(0))),
                     SnapshotBuffer::default(),
                     MeshMaterial3d(remote_mat.clone()),
                 ));

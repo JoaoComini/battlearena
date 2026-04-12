@@ -1,0 +1,8 @@
+use bevy_state::prelude::States;
+
+#[derive(States, Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum AppState {
+    #[default]
+    Connecting,
+    InGame,
+}
