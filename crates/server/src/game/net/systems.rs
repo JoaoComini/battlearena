@@ -1,33 +1,20 @@
+use avian2d::prelude::*;
 use bevy::prelude::*;
 use bevy_renet::{
-    renet::{ClientId, DefaultChannel, ServerEvent},
+    renet::{DefaultChannel, ServerEvent},
     RenetServer, RenetServerEvent,
 };
 use shared::{
-    logic::apply_input,
+    components::{NetworkId, PrefabId},
+    physics::PLAYER_RADIUS,
     protocol::{C2S, MoveInput, S2C},
-    types::{NetworkId, PlayerState, Pos2, PrefabId},
+    types::{PlayerState, Pos2},
 };
 
-use crate::resources::{InputQueue, EntityRegistry, Position};
-
-/// How far the client-reported position may differ from the server's before
-/// a correction is issued (squared, in world units).
-const CORRECTION_EPSILON_SQ: f32 = 0.1;
-
-pub const PLAYER_PREFAB: PrefabId = PrefabId(0);
-
-/// Marker: entity is pending broadcast of EntityDespawned, then despawn.
-#[derive(Component)]
-pub struct PendingDespawn;
-
-/// Marker: this player entity has not yet been sent a Welcome message.
-#[derive(Component)]
-pub struct PendingWelcome;
-
-/// The last tick simulated for this player. Used to reject stale inputs.
-#[derive(Component, Default)]
-pub struct LastSimulatedTick(pub shared::tick::TickNumber);
+use crate::resources::{
+    EntityRegistry, InputQueue, LastSimulatedTick, PendingDespawn, PendingWelcome, PlayerPosition,
+    PLAYER_PREFAB,
+};
 
 /// Triggered by bevy_renet when a client connects or disconnects.
 pub fn handle_server_events(
@@ -41,12 +28,17 @@ pub fn handle_server_events(
             info!("Player {client_id} connected");
             let id = NetworkId(client_id);
             let entity = commands.spawn((
+                Name::new(format!("Player_{client_id}")),
                 id,
                 PLAYER_PREFAB,
-                Position(Pos2::ZERO),
+                PlayerPosition(Pos2::ZERO),
                 InputQueue::default(),
                 LastSimulatedTick::default(),
                 PendingWelcome,
+                RigidBody::Kinematic,
+                Position(Vec2::ZERO),
+                Collider::circle(PLAYER_RADIUS),
+                CustomPositionIntegration,
             )).id();
             registry.0.insert(id, entity);
         }
@@ -54,7 +46,6 @@ pub fn handle_server_events(
             info!("Player {client_id} disconnected: {reason}");
             let id = NetworkId(client_id);
             if let Some(entity) = registry.0.remove(&id) {
-                // Defer the actual despawn so broadcast_despawn can send the message first.
                 commands.entity(entity).insert(PendingDespawn);
             }
         }
@@ -93,41 +84,8 @@ fn enqueue_if_new(queue: &mut InputQueue, last_simulated: &LastSimulatedTick, mv
         return;
     }
     let pos = queue.0.partition_point(|(e, _)| e.tick < mv.tick);
-    if queue.0.get(pos).map_or(true, |(e, _)| e.tick != mv.tick) {
+    if queue.0.get(pos).is_none_or(|(e, _)| e.tick != mv.tick) {
         queue.0.insert(pos, (mv, verify));
-    }
-}
-
-/// Drains each player's input queue, simulates movement, and issues corrections
-/// or acks depending on whether the client-reported position was correct.
-pub fn tick_game(
-    mut server: ResMut<RenetServer>,
-    mut players: Query<(&NetworkId, &mut Position, &mut InputQueue, &mut LastSimulatedTick)>,
-) {
-    for (net_id, mut pos, mut queue, mut last_simulated) in &mut players {
-        let client_id: ClientId = net_id.0;
-
-        while let Some((mv, verify)) = queue.0.pop_front() {
-            // Simulate all ticks from last_simulated+1 up to mv.tick.
-            let steps = mv.tick.saturating_sub(last_simulated.0);
-            for _ in 0..steps {
-                pos.0 = apply_input(pos.0, mv.input);
-            }
-            last_simulated.0 = mv.tick;
-
-            if verify {
-                let dx = pos.0.x - mv.pos.x;
-                let dy = pos.0.y - mv.pos.y;
-                let msg = if dx * dx + dy * dy > CORRECTION_EPSILON_SQ {
-                    S2C::Correction { tick: mv.tick, pos: pos.0 }
-                } else {
-                    S2C::Ack { tick: mv.tick }
-                };
-                if let Ok(bytes) = postcard::to_allocvec(&msg) {
-                    server.send_message(client_id, DefaultChannel::ReliableOrdered, bytes);
-                }
-            }
-        }
     }
 }
 
@@ -135,7 +93,7 @@ pub fn tick_game(
 pub fn broadcast_state(
     mut server: ResMut<RenetServer>,
     time: Res<Time<Real>>,
-    players: Query<(&NetworkId, &Position)>,
+    players: Query<(&NetworkId, &PlayerPosition)>,
 ) {
     let snapshot: Vec<PlayerState> = players
         .iter()
@@ -155,10 +113,9 @@ pub fn send_initial_state(
     mut commands: Commands,
     mut server: ResMut<RenetServer>,
     pending: Query<(Entity, &NetworkId), With<PendingWelcome>>,
-    existing: Query<(&NetworkId, &PrefabId, &Position), Without<PendingWelcome>>,
+    existing: Query<(&NetworkId, &PrefabId, &PlayerPosition), Without<PendingWelcome>>,
 ) {
     for (entity, net_id) in &pending {
-        // Send EntitySpawned for every already-existing entity to the new client.
         for (existing_id, prefab, pos) in &existing {
             let owner = Some(existing_id.0);
             let msg = S2C::EntitySpawned { id: *existing_id, prefab: *prefab, pos: pos.0, owner };
@@ -167,7 +124,6 @@ pub fn send_initial_state(
             }
         }
 
-        // Send this player's own EntitySpawned to them and broadcast to all others.
         let owner = Some(net_id.0);
         let spawned = S2C::EntitySpawned { id: *net_id, prefab: PLAYER_PREFAB, pos: Pos2::ZERO, owner };
         if let Ok(bytes) = postcard::to_allocvec(&spawned) {
@@ -192,4 +148,3 @@ pub fn broadcast_despawn(
         commands.entity(entity).despawn();
     }
 }
-

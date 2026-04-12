@@ -2,22 +2,26 @@ use bevy::prelude::*;
 use bevy_renet::{renet::DefaultChannel, RenetClient};
 use shared::{
     protocol::{C2S, MoveInput, S2C},
+    states::AppState,
     tick::TickNumber,
 };
 
 use crate::resources::{
-    CurrentInput, EntityRegistry, InputHistory, LocalPlayer, PendingCorrection, PredictedPosition,
-    ServerTime, SnapshotBuffer, SpawnRegistry,
+    CurrentInput, EntityRegistry, InputHistory, LocalClientId, LocalPlayer, PendingCorrection,
+    PredictedPosition, ServerTime, SnapshotBuffer, SpawnRegistry,
 };
 
 /// Drains both server channels and dispatches all inbound messages:
 /// - ReliableOrdered: entity lifecycle (spawn/despawn), corrections, acks.
 /// - Unreliable: world snapshots.
+#[allow(clippy::too_many_arguments)]
 pub fn recv_server(
     mut commands: Commands,
     mut client: ResMut<RenetClient>,
     mut registry: ResMut<EntityRegistry>,
     spawn_registry: Res<SpawnRegistry>,
+    local_client_id: Res<LocalClientId>,
+    mut next_state: ResMut<NextState<AppState>>,
     time: Res<Time<bevy::prelude::Real>>,
     mut server_time: ResMut<ServerTime>,
     mut local: Query<(Entity, &mut InputHistory), With<LocalPlayer>>,
@@ -45,6 +49,9 @@ pub fn recv_server(
                 let entity = commands.spawn(id).id();
                 spawn_fn(&mut commands, entity, pos, owner);
                 registry.0.insert(id, entity);
+                if owner == Some(local_client_id.0) {
+                    next_state.set(AppState::InGame);
+                }
             }
             Ok(S2C::EntityDespawned { id }) => {
                 if let Some(entity) = registry.0.remove(&id) {
@@ -53,12 +60,12 @@ pub fn recv_server(
             }
             Ok(S2C::Correction { tick, pos }) => {
                 info!("Correction received: tick={tick}, pos=({}, {})", pos.x, pos.y);
-                if latest_correction.map_or(true, |(t, _)| tick > t) {
+                if latest_correction.is_none_or(|(t, _)| tick > t) {
                     latest_correction = Some((tick, pos));
                 }
             }
             Ok(S2C::Ack { tick }) => {
-                if latest_ack.map_or(true, |t| tick > t) {
+                if latest_ack.is_none_or(|t| tick > t) {
                     latest_ack = Some(tick);
                 }
             }
@@ -76,7 +83,7 @@ pub fn recv_server(
 
     if let Ok((entity, mut history)) = local.single_mut() {
         if let Some(ack) = ack_tick {
-            while history.0.front().map_or(false, |(t, _, _)| *t <= ack) {
+            while history.0.front().is_some_and(|(t, _, _)| *t <= ack) {
                 history.0.pop_front();
             }
         }
