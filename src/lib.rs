@@ -1,5 +1,4 @@
 pub mod protocol;
-pub mod shared;
 
 #[cfg(feature = "client")]
 pub mod client;
@@ -9,3 +8,5 @@ pub mod server;
 
 #[cfg(feature = "gui")]
 pub mod renderer;
+
+pub mod shared;
