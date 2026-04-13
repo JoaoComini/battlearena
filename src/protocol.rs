@@ -41,6 +41,22 @@ impl Ease for PlayerPosition {
     }
 }
 
+impl Diffable<Vec2> for PlayerPosition {
+    fn base_value() -> Self {
+        PlayerPosition(Vec2::ZERO)
+    }
+
+    // delta = new - self
+    fn diff(&self, new: &Self) -> Vec2 {
+        new.0 - self.0
+    }
+
+    // self += delta
+    fn apply_diff(&mut self, delta: &Vec2) {
+        self.0 += *delta;
+    }
+}
+
 #[derive(Component, Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct PlayerColor(pub Color);
 
@@ -94,7 +110,8 @@ impl Plugin for ProtocolPlugin {
 
         app.register_component::<PlayerPosition>()
             .add_prediction()
-            .add_linear_interpolation();
+            .add_linear_interpolation()
+            .add_linear_correction_fn::<Vec2>();
 
         app.register_component::<PlayerColor>();
 

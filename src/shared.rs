@@ -14,7 +14,7 @@ pub const TICK_RATE: f64 = 60.0;
 
 /// How often the server flushes replication updates to clients.
 /// Sending every ~6 ticks is a good balance for a 60 Hz simulation.
-pub const SEND_INTERVAL: Duration = Duration::from_millis(100);
+pub const SEND_INTERVAL: Duration = Duration::from_millis(16);
 
 pub const SERVER_PORT: u16 = 5000;
 pub const CLIENT_PORT: u16 = 0; // let the OS assign a port
