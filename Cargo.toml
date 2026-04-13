@@ -30,6 +30,8 @@ bevy = { version = "0.18", default-features = false, features = [
     "bevy_asset",
     "bevy_color",
     "bevy_state",
+    "tonemapping_luts",
+    "zstd_rust",
     "std",
     "multi_threaded",
     "keyboard",

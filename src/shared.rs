@@ -54,7 +54,6 @@ pub fn shared_movement_behaviour(mut position: Mut<PlayerPosition>, input: &Inpu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bevy::ecs::change_detection::MutUntyped;
 
     fn make_input(up: bool, down: bool, left: bool, right: bool) -> Inputs {
         Inputs::Direction(Direction { up, down, left, right })
