@@ -1,49 +1,47 @@
 [package]
-name = "simple_box"
-version = "0.26.4"
-authors = ["Charles Bournhonesque <charlesbour@gmail.com>"]
+name = "battlearena"
+version = "0.1.0"
 edition = "2021"
-description = "Examples for the lightyearServer-client networking library for the Bevy game engine"
-readme = "README.md"
-repository = "https://github.com/cBournhonesque/lightyear"
-keywords = ["bevy", "multiplayer", "networking", "netcode", "gamedev"]
-categories = ["game-development", "network-programming"]
-license = "MIT OR Apache-2.0"
-publish = false
 
-[features]
-default = ["client", "gui", "server", "netcode", "udp"]
-client = ["gui", "lightyear_examples_common/client"]
-gui = ["lightyear_examples_common/gui2d"]
-server = ["lightyear_examples_common/server"]
-netcode = ["lightyear_examples_common/netcode"]
-udp = ["lightyear_examples_common/udp"]
-steam = ["lightyear_examples_common/steam"]
-
-
-[dependencies]
-lightyear = { "workspace" = true, features = [
-  "interpolation",
-  "prediction",
-  "replication",
-  "input_native",
-] }
-lightyear_examples_common.workspace = true
-serde.workspace = true
-bevy.workspace = true
-
-
-[package.metadata.bevy_cli.web]
-rustflags = ["--cfg", "getrandom_backend=\"wasm_js\""]
-default-features = false
-features = ["client", "netcode"]
-
-[lints]
-workspace = true
+[[bin]]
+name = "battlearena"
+doc = false
 
 [lib]
 doc = false
 
-[[bin]]
-name = "simple_box"
-doc = false
+[features]
+default = ["client", "server"]
+client  = ["lightyear/client"]
+gui     = ["client", "bevy/2d", "bevy/bevy_ui", "bevy/bevy_winit", "bevy/bevy_picking"]
+server  = ["lightyear/server"]
+steam   = ["lightyear/steam"]
+
+[dependencies]
+lightyear = { version = "0.26.0", default-features = false, features = [
+    "interpolation",
+    "prediction",
+    "replication",
+    "input_native",
+    "netcode",
+    "udp",
+] }
+bevy = { version = "0.18", default-features = false, features = [
+    "bevy_log",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_state",
+    "std",
+    "multi_threaded",
+    "keyboard",
+    "x11",
+] }
+serde = { version = "1.0", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
+cfg-if = "1"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev]
+opt-level = 1

@@ -4,7 +4,7 @@
 //! mispredictions/rollbacks.
 use crate::protocol::*;
 use bevy::prelude::*;
-use lightyear_examples_common::shared::SharedSettings;
+use crate::common::shared::SharedSettings;
 
 pub struct SharedPlugin;
 

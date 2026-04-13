@@ -13,7 +13,7 @@ use lightyear::connection::client::Connected;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use lightyear_examples_common::shared::SEND_INTERVAL;
+use crate::common::shared::SEND_INTERVAL;
 
 pub struct ExampleServerPlugin;
 

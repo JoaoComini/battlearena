@@ -18,9 +18,8 @@ use crate::server::ExampleServerPlugin;
 use crate::shared::SharedPlugin;
 use bevy::prelude::*;
 use core::time::Duration;
-use lightyear_examples_common::cli::{Cli, Mode};
-
-use lightyear_examples_common::shared::FIXED_TIMESTEP_HZ;
+use battlearena::common::cli::{Cli, Mode};
+use battlearena::common::shared::FIXED_TIMESTEP_HZ;
 
 #[cfg(feature = "client")]
 mod client;
