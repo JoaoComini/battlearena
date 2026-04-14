@@ -1,46 +1,65 @@
 [package]
-name = "battlearena"
+name = "battle_arena"
 version = "0.1.0"
+authors = ["Joaum Comini <jpcomini@hotmail.com>", "Otavio 'Kaps' <luis_otac_pomp@hotmail.com>"]
 edition = "2021"
+description = "Battle Arena example for the lightyear networking library"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+publish = false
 
-[[bin]]
-name = "battlearena"
-doc = false
+[features]
+default = ["client", "gui", "server", "netcode", "udp"]
+client = ["lightyear/client"]
+gui = ["gui2d"]
+server = ["lightyear/server"]
+netcode = ["lightyear/netcode"]
+udp = ["lightyear/udp"]
+steam = ["lightyear/steam"]
+gui2d = [
+  "dep:bevy-inspector-egui",
+  "bevy/2d",
+  "bevy/2d_bevy_render",
+  "bevy/2d_api",
+]
+gui3d = [
+  "dep:bevy-inspector-egui",
+  "bevy/3d",
+  "bevy/3d_bevy_render",
+  "bevy/3d_api",
+]
+
+
+[dependencies]
+lightyear = { version = "0.26.4", features = [
+  "interpolation",
+  "prediction",
+  "replication",
+  "input_native",
+  "udp",
+] }
+serde = { version = "1", features = ["derive"] }
+bevy = { version = "0.18", features = [
+  "bevy_state",
+  "bevy_log",
+  "reflect_auto_register",
+] }
+async-compat = "0.2"
+cfg-if = "1.0"
+clap = { version = "4.5.4", features = ["derive"] }
+bevy-inspector-egui = { version = "0.36", optional = true }
+bevy_egui = { version = "0.39", optional = true }
+tracing = "0.1.40"
+ron = { version = "0.12.0" }
+avian2d = { version = "0.6.1", features = ["serialize"] }
+
+[lints.rust]
+dead_code = "allow"
+unused_variables = "allow"
 
 [lib]
 doc = false
 
-[features]
-default = ["client", "server"]
-client  = ["gui", "netcode", "udp", "lightyear/client", "lightyear/input_native", "lightyear/prediction"]
-gui     = ["bevy/bevy_pbr", "bevy/bevy_render", "bevy/bevy_winit", "bevy/bevy_gizmos"]
-server  = ["netcode", "udp", "lightyear/server"]
-netcode = ["lightyear/netcode"]
-udp     = ["lightyear/udp"]
-
-[dependencies]
-lightyear = { version = "0.26.4", default-features = false, features = [
-    "interpolation",
-    "prediction",
-    "replication",
-    "input_native",
-] }
-bevy = { version = "0.18", default-features = false, features = [
-    "bevy_log",
-    "bevy_asset",
-    "bevy_color",
-    "bevy_state",
-    "std",
-    "multi_threaded",
-    "keyboard",
-    "x11",
-] }
-serde = { version = "1.0", features = ["derive"] }
-clap = { version = "4", features = ["derive"] }
-cfg-if = "1"
-
-[profile.dev.package."*"]
-opt-level = 3
-
-[profile.dev]
-opt-level = 1
+[[bin]]
+name = "battle_arena"
+doc = false
