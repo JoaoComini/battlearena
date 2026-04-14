@@ -2,6 +2,11 @@
 name = "battle_arena"
 version = "0.1.0"
 authors = ["Joaum Comini <jpcomini@hotmail.com>", "Otavio 'Kaps' <luis_otac_pomp@hotmail.com>"]
+edition = "2021"
+description = "Battle Arena example for the lightyear networking library"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
+publish = false
 
 [features]
 default = ["client", "gui", "server", "netcode", "udp"]
