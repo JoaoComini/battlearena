@@ -1,15 +1,7 @@
 [package]
-name = "simple_box"
-version = "0.26.4"
-authors = ["Charles Bournhonesque <charlesbour@gmail.com>"]
-edition = "2021"
-description = "Examples for the lightyearServer-client networking library for the Bevy game engine"
-readme = "README.md"
-repository = "https://github.com/cBournhonesque/lightyear"
-keywords = ["bevy", "multiplayer", "networking", "netcode", "gamedev"]
-categories = ["game-development", "network-programming"]
-license = "MIT OR Apache-2.0"
-publish = false
+name = "battle_arena"
+version = "0.1.0"
+authors = ["Joaum Comini <jpcomini@hotmail.com>", "Otavio 'Kaps' <luis_otac_pomp@hotmail.com>"]
 
 [features]
 default = ["client", "gui", "server", "netcode", "udp"]
@@ -74,5 +66,5 @@ unused_variables = "allow"
 doc = false
 
 [[bin]]
-name = "simple_box"
+name = "battle_arena"
 doc = false

@@ -664,6 +664,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
+name = "battle_arena"
+version = "0.1.0"
+dependencies = [
+ "async-compat",
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_egui",
+ "cfg-if",
+ "clap",
+ "console_error_panic_hook",
+ "getrandom 0.2.17",
+ "getrandom 0.3.4",
+ "lightyear",
+ "rand",
+ "ron",
+ "serde",
+ "tracing",
+]
+
+[[package]]
 name = "bevy"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6819,26 +6839,6 @@ name = "simdutf8"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
-
-[[package]]
-name = "simple_box"
-version = "0.26.4"
-dependencies = [
- "async-compat",
- "bevy",
- "bevy-inspector-egui",
- "bevy_egui",
- "cfg-if",
- "clap",
- "console_error_panic_hook",
- "getrandom 0.2.17",
- "getrandom 0.3.4",
- "lightyear",
- "rand",
- "ron",
- "serde",
- "tracing",
-]
 
 [[package]]
 name = "sketches-ddsketch"
