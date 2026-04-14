@@ -1096,12 +1096,14 @@ dependencies = [
  "bevy_log",
  "bevy_math",
  "bevy_mesh",
+ "bevy_picking",
  "bevy_platform",
  "bevy_reflect",
  "bevy_render",
  "bevy_shader",
  "bevy_time",
  "bevy_transform",
+ "bevy_ui_render",
  "bevy_utils",
  "bevy_window",
  "bevy_winit",
@@ -1117,6 +1119,7 @@ dependencies = [
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webbrowser",
  "wgpu-types",
  "winit",
 ]
@@ -4506,25 +4509,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lightyear_examples_common"
-version = "0.26.4"
-dependencies = [
- "async-compat",
- "bevy",
- "bevy-inspector-egui",
- "cfg-if",
- "clap",
- "console_error_panic_hook",
- "getrandom 0.2.17",
- "getrandom 0.3.4",
- "lightyear",
- "rand",
- "ron",
- "serde",
- "tracing",
-]
-
-[[package]]
 name = "lightyear_frame_interpolation"
 version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6840,10 +6824,20 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
 name = "simple_box"
 version = "0.26.4"
 dependencies = [
+ "async-compat",
  "bevy",
+ "bevy-inspector-egui",
+ "bevy_egui",
+ "cfg-if",
+ "clap",
+ "console_error_panic_hook",
+ "getrandom 0.2.17",
+ "getrandom 0.3.4",
  "lightyear",
- "lightyear_examples_common",
+ "rand",
+ "ron",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -7959,6 +7953,22 @@ dependencies = [
  "pastey",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "webbrowser"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe985f41e291eecef5e5c0770a18d28390addb03331c043964d9e916453d6f16"
+dependencies = [
+ "core-foundation 0.10.1",
+ "jni 0.22.4",
+ "log",
+ "ndk-context",
+ "objc2 0.6.4",
+ "objc2-foundation 0.3.2",
+ "url",
  "web-sys",
 ]
 

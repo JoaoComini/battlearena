@@ -15,11 +15,11 @@ use bevy::state::app::StatesPlugin;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "client")]
-use crate::client::{ClientTransports, ExampleClient, connect};
+use crate::client_setup::{ClientTransports, ExampleClient, connect};
 #[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
 use crate::client_renderer::ExampleClientRendererPlugin;
 #[cfg(feature = "server")]
-use crate::server::{ExampleServer, ServerTransports, start};
+use crate::server_setup::{ExampleServer, ServerTransports, start};
 #[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
 use crate::server_renderer::ExampleServerRendererPlugin;
 use crate::shared::{CLIENT_PORT, SERVER_ADDR, SERVER_PORT, SHARED_SETTINGS, STEAM_APP_ID};

@@ -18,9 +18,19 @@ use crate::server::ExampleServerPlugin;
 use crate::shared::SharedPlugin;
 use bevy::prelude::*;
 use core::time::Duration;
-use lightyear_examples_common::cli::{Cli, Mode};
+use crate::cli::{Cli, Mode};
 
-use lightyear_examples_common::shared::FIXED_TIMESTEP_HZ;
+use crate::shared::FIXED_TIMESTEP_HZ;
+
+mod cli;
+#[cfg(feature = "client")]
+mod client_setup;
+#[cfg(feature = "server")]
+mod server_setup;
+#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
+mod client_renderer;
+#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
+mod server_renderer;
 
 #[cfg(feature = "client")]
 mod client;

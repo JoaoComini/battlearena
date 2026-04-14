@@ -8,12 +8,12 @@
 //! Lightyear will handle the replication of entities automatically if you add a `Replicate` component to them.
 use crate::protocol::*;
 use crate::shared;
+use crate::shared::SEND_INTERVAL;
 use bevy::prelude::*;
 use lightyear::connection::client::Connected;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
-use lightyear_examples_common::shared::SEND_INTERVAL;
 
 pub struct ExampleServerPlugin;
 
