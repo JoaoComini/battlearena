@@ -1,9 +1,3 @@
-//! This example showcases how to use Lightyear with Bevy, to easily get replication along with prediction/interpolation working.
-//!
-//! There is a lot of setup code, but it's mostly to have the examples work in all possible configurations of transport.
-//! (all transports are supported, as well as running the example in client-and-server or host-server mode)
-//!
-//!
 //! Run with
 //! - `cargo run -- server`
 //! - `cargo run -- client -c 1`
@@ -11,38 +5,27 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
+use crate::cli::{Cli, Mode};
 #[cfg(feature = "client")]
 use crate::client::ExampleClientPlugin;
 #[cfg(feature = "server")]
 use crate::server::ExampleServerPlugin;
 use crate::shared::SharedPlugin;
+use crate::shared::FIXED_TIMESTEP_HZ;
 use bevy::prelude::*;
 use core::time::Duration;
-use crate::cli::{Cli, Mode};
-
-use crate::shared::FIXED_TIMESTEP_HZ;
 
 mod cli;
-#[cfg(feature = "client")]
-mod client_setup;
-#[cfg(feature = "server")]
-mod server_setup;
-#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
-mod client_renderer;
-#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
-mod server_renderer;
+mod protocol;
+mod shared;
 
 #[cfg(feature = "client")]
 mod client;
-mod protocol;
 #[cfg(feature = "gui")]
 mod renderer;
 #[cfg(feature = "server")]
 mod server;
 
-mod shared;
-
-/// When running the example as a binary, we only support Client or Server mode.
 fn main() {
     let cli = Cli::default();
 
@@ -59,11 +42,6 @@ fn main() {
         }
         #[cfg(feature = "server")]
         Some(Mode::Server) => {
-            app.add_plugins(ExampleServerPlugin);
-        }
-        #[cfg(all(feature = "client", feature = "server"))]
-        Some(Mode::HostClient { client_id }) => {
-            app.add_plugins(ExampleClientPlugin);
             app.add_plugins(ExampleServerPlugin);
         }
         _ => {}

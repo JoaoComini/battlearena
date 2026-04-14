@@ -1,3 +1,8 @@
+#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
+pub mod client;
+#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
+pub mod server;
+
 use crate::protocol::*;
 use bevy::prelude::*;
 

@@ -1,4 +1,3 @@
-//! This module introduces a settings struct that can be used to configure the server and client.
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 use core::net::{Ipv4Addr, SocketAddr};
@@ -9,16 +8,15 @@ use crate::shared::SharedSettings;
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use lightyear::netcode::client_plugin::NetcodeConfig;
+use lightyear::netcode::NetcodeClient;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
-use lightyear::{netcode::NetcodeClient, websocket::client::WebSocketTarget};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum ClientTransports {
     Udp,
-    WebSocket,
     #[cfg(feature = "steam")]
     Steam,
 }
@@ -75,27 +73,10 @@ impl ExampleClient {
             };
 
             match settings.transport {
-                #[cfg(not(target_family = "wasm"))]
+                #[cfg(feature = "udp")]
                 ClientTransports::Udp => {
                     add_netcode(&mut entity_mut)?;
                     entity_mut.insert(UdpIo::default());
-                }
-                ClientTransports::WebSocket => {
-                    add_netcode(&mut entity_mut)?;
-                    let config = {
-                        #[cfg(target_family = "wasm")]
-                        {
-                            ClientConfig::default()
-                        }
-                        #[cfg(not(target_family = "wasm"))]
-                        {
-                            ClientConfig::builder().with_no_cert_validation()
-                        }
-                    };
-                    entity_mut.insert(WebSocketClientIo {
-                        config,
-                        target: WebSocketTarget::Addr(Default::default()),
-                    });
                 }
                 #[cfg(feature = "steam")]
                 ClientTransports::Steam => {
@@ -110,7 +91,7 @@ impl ExampleClient {
     }
 }
 
-pub(crate) fn connect(mut commands: Commands, client: Single<Entity, With<Client>>) {
+pub fn connect(mut commands: Commands, client: Single<Entity, With<Client>>) {
     commands.trigger(Connect {
         entity: client.into_inner(),
     });

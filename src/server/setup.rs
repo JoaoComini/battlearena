@@ -1,4 +1,4 @@
-//! This module introduces a settings struct that can be used to configure the server and client.
+//! Server network transport configuration.
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 use core::net::{Ipv4Addr, SocketAddr};
@@ -8,11 +8,9 @@ use core::time::Duration;
 use ron;
 
 use crate::shared::SharedSettings;
-#[cfg(not(target_family = "wasm"))]
 use async_compat::Compat;
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
-#[cfg(not(target_family = "wasm"))]
 use bevy::tasks::IoTaskPool;
 use lightyear::netcode::{NetcodeServer, PRIVATE_KEY_BYTES};
 use lightyear::prelude::server::*;
@@ -24,16 +22,9 @@ use tracing::warn;
 #[non_exhaustive]
 pub enum ServerTransports {
     #[cfg(feature = "udp")]
-    Udp {
-        local_port: u16,
-    },
-    WebSocket {
-        local_port: u16,
-    },
+    Udp { local_port: u16 },
     #[cfg(feature = "steam")]
-    Steam {
-        local_port: u16,
-    },
+    Steam { local_port: u16 },
 }
 
 #[derive(Component, Debug)]
@@ -75,21 +66,6 @@ impl ExampleServer {
                     let server_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), local_port);
                     entity_mut.insert((LocalAddr(server_addr), ServerUdpIo::default()));
                 }
-                ServerTransports::WebSocket { local_port } => {
-                    add_netcode(&mut entity_mut);
-                    let server_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), local_port);
-                    let sans = vec![
-                        "localhost".to_string(),
-                        "127.0.0.1".to_string(),
-                        "::1".to_string(),
-                    ];
-                    let config = ServerConfig::builder()
-                        .with_bind_address(server_addr)
-                        .with_identity(
-                            lightyear::websocket::server::Identity::self_signed(sans).unwrap(),
-                        );
-                    entity_mut.insert((LocalAddr(server_addr), WebSocketServerIo { config }));
-                }
                 #[cfg(feature = "steam")]
                 ServerTransports::Steam { local_port } => {
                     let server_addr = SocketAddr::new(Ipv4Addr::UNSPECIFIED.into(), local_port);
@@ -104,7 +80,7 @@ impl ExampleServer {
     }
 }
 
-pub(crate) fn start(mut commands: Commands, server: Single<Entity, With<Server>>) {
+pub fn start(mut commands: Commands, server: Single<Entity, With<Server>>) {
     commands.trigger(Start {
         entity: server.into_inner(),
     });

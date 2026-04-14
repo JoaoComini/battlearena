@@ -1,4 +1,3 @@
-//! Utilities for building the Bevy app
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 #![allow(dead_code)]
@@ -9,19 +8,19 @@ use core::time::Duration;
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 
-use bevy::DefaultPlugins;
 use bevy::diagnostic::DiagnosticsPlugin;
 use bevy::state::app::StatesPlugin;
+use bevy::DefaultPlugins;
 use clap::{Parser, Subcommand};
 
 #[cfg(feature = "client")]
-use crate::client_setup::{ClientTransports, ExampleClient, connect};
+use crate::client::{connect, ClientTransports, ExampleClient};
 #[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
-use crate::client_renderer::ExampleClientRendererPlugin;
-#[cfg(feature = "server")]
-use crate::server_setup::{ExampleServer, ServerTransports, start};
+use crate::renderer::client::ExampleClientRendererPlugin;
 #[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
-use crate::server_renderer::ExampleServerRendererPlugin;
+use crate::renderer::server::ExampleServerRendererPlugin;
+#[cfg(feature = "server")]
+use crate::server::{start, ExampleServer, ServerTransports};
 use crate::shared::{CLIENT_PORT, SERVER_ADDR, SERVER_PORT, SHARED_SETTINGS, STEAM_APP_ID};
 use lightyear::link::RecvLinkConditioner;
 #[cfg(feature = "client")]
@@ -47,10 +46,6 @@ impl Cli {
         match &self.mode {
             #[cfg(feature = "client")]
             Some(Mode::Client { client_id }) => *client_id,
-            #[cfg(all(feature = "client", feature = "server"))]
-            Some(Mode::Separate { client_id }) => *client_id,
-            #[cfg(all(feature = "client", feature = "server"))]
-            Some(Mode::HostClient { client_id }) => *client_id,
             _ => None,
         }
     }
@@ -89,25 +84,8 @@ impl Cli {
                 ));
                 app
             }
-            #[cfg(all(feature = "client", feature = "server"))]
-            Some(Mode::HostClient { client_id }) => {
-                #[cfg(feature = "steam")]
-                app.add_steam_resources(STEAM_APP_ID);
-                app.add_plugins((
-                    lightyear::prelude::client::ClientPlugins { tick_duration },
-                    lightyear::prelude::server::ServerPlugins { tick_duration },
-                    #[cfg(any(feature = "gui2d", feature = "gui3d"))]
-                    ExampleClientRendererPlugin::new(format!("Host-Client {client_id:?}")),
-                    #[cfg(any(feature = "gui2d", feature = "gui3d"))]
-                    ExampleServerRendererPlugin::new("Host-Server".to_string()),
-                ));
-                app
-            }
             None => {
                 panic!("Mode is required");
-            }
-            _ => {
-                todo!()
             }
         }
     }
@@ -125,7 +103,6 @@ impl Cli {
                         server_addr: SERVER_ADDR,
                         conditioner: Some(RecvLinkConditioner::new(conditioner.clone())),
                         transport: ClientTransports::Udp,
-                        // transport: ClientTransports::WebSocket,
                         // #[cfg(feature = "steam")]
                         // transport: ClientTransports::Steam,
                         shared: SHARED_SETTINGS,
@@ -142,16 +119,6 @@ impl Cli {
                         transport: ServerTransports::Udp {
                             local_port: SERVER_PORT,
                         },
-                        // transport: ServerTransports::WebSocket {
-                        //     local_port: SERVER_PORT,
-                        // },
-                        // transport: ServerTransports::WebTransport {
-                        //     local_port: SERVER_PORT,
-                        //     certificate: WebTransportCertificateSettings::FromFile {
-                        //         cert: "../../certificates/cert.pem".to_string(),
-                        //         key: "../../certificates/key.pem".to_string(),
-                        //     },
-                        // },
                         // #[cfg(feature = "steam")]
                         // transport: ServerTransports::Steam {
                         //     local_port: SERVER_PORT,
@@ -160,43 +127,6 @@ impl Cli {
                     })
                     .id();
                 app.add_systems(Startup, start);
-            }
-            #[cfg(all(feature = "client", feature = "server"))]
-            Some(Mode::HostClient { client_id }) => {
-                // Spawn the client and server connections here
-                // This is where you would set up the client and server entities
-                let server = app
-                    .world_mut()
-                    .spawn(ExampleServer {
-                        conditioner: None,
-                        transport: ServerTransports::Udp {
-                            local_port: SERVER_PORT,
-                        },
-                        // transport: ServerTransports::WebSocket {
-                        //     local_port: SERVER_PORT,
-                        // },
-                        // transport: ServerTransports::WebTransport {
-                        //     local_port: SERVER_PORT,
-                        //     certificate: WebTransportCertificateSettings::FromFile {
-                        //         cert: "../../certificates/cert.pem".to_string(),
-                        //         key: "../../certificates/key.pem".to_string(),
-                        //     },
-                        // },
-                        shared: SHARED_SETTINGS,
-                    })
-                    .id();
-
-                let client = app
-                    .world_mut()
-                    .spawn((
-                        Client::default(),
-                        Name::new("HostClient"),
-                        LinkOf { server },
-                    ))
-                    .id();
-                // NOTE: it's ugly but i believe that you need to start the server before
-                //  connecting the host-client for things to work properly
-                app.add_systems(Startup, (start, connect).chain());
             }
             _ => {}
         }
@@ -214,28 +144,12 @@ pub enum Mode {
     #[cfg(feature = "server")]
     /// Runs the app in server mode
     Server,
-    #[cfg(all(feature = "client", feature = "server"))]
-    /// Creates two bevy apps: a client app and a server app.
-    /// Data gets passed between the two via channels.
-    Separate {
-        #[arg(short, long, default_value = None)]
-        client_id: Option<u64>,
-    },
-    #[cfg(all(feature = "client", feature = "server"))]
-    /// Run the app in host-client mode.
-    /// The client and the server will run inside the same app. The peer acts both as a client and a server.
-    HostClient {
-        #[arg(short, long, default_value = None)]
-        client_id: Option<u64>,
-    },
 }
 
 impl Default for Mode {
     fn default() -> Self {
         cfg_if::cfg_if! {
-            if #[cfg(all(feature = "client", feature = "server"))] {
-                Mode::HostClient { client_id: None }
-            } else if #[cfg(feature = "server")] {
+            if #[cfg(feature = "server")] {
                 Mode::Server
             } else {
                 Mode::Client { client_id: None }
@@ -258,24 +172,7 @@ impl SendApp {
 
 impl Default for Cli {
     fn default() -> Self {
-        cli()
-    }
-}
-
-/// Parse the CLI arguments.
-/// `clap` doesn't run in wasm, so we simply run in Client mode with a random ClientId
-pub fn cli() -> Cli {
-    cfg_if::cfg_if! {
-        if #[cfg(target_family = "wasm")] {
-            let client_id = rand::random::<u64>();
-            Cli {
-                mode: Some(Mode::Client {
-                    client_id: Some(client_id),
-                })
-            }
-        } else {
-            Cli::parse()
-        }
+        Cli::parse()
     }
 }
 
@@ -286,7 +183,6 @@ pub fn window_plugin() -> WindowPlugin {
             title: format!("Lightyear Example: {}", env!("CARGO_PKG_NAME")),
             resolution: (1024, 768).into(),
             present_mode: PresentMode::AutoVsync,
-            // set to true if we want to capture tab etc in wasm
             prevent_default_event_handling: true,
             ..Default::default()
         }),
@@ -319,9 +215,6 @@ pub fn new_gui_app(add_inspector: bool) -> App {
     // we want the same frequency of updates for both focused and unfocused
     // Otherwise when testing the movement can look choppy for unfocused windows
     app.insert_resource(WinitSettings::continuous());
-
-    #[cfg(feature = "debug")]
-    app.add_plugins(DebugUIPlugin);
 
     if add_inspector {
         app.add_plugins(bevy_inspector_egui::bevy_egui::EguiPlugin::default());

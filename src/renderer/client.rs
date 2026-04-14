@@ -1,7 +1,5 @@
 use bevy::picking::prelude::{Click, Pointer};
 use bevy::prelude::*;
-#[cfg(feature = "bevygap_client")]
-use bevygap_client_plugin::prelude::*;
 use lightyear::connection::client::ClientState;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
