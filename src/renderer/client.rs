@@ -1,3 +1,4 @@
+use crate::client::systems::SelectedCharacter;
 use bevy::picking::prelude::{Click, Pointer};
 use bevy::prelude::*;
 use lightyear::connection::client::ClientState;
@@ -24,7 +25,7 @@ impl Plugin for BattleArenaClientRendererPlugin {
         app.insert_resource(ClearColor::default());
         app.add_systems(Startup, set_window_title);
         spawn_connect_button(app);
-        app.add_systems(Update, update_button_text);
+        app.add_systems(Update, (update_button_text, update_character_selection_text));
         app.add_observer(on_update_status_message);
         app.add_observer(handle_connection);
         app.add_observer(handle_disconnection);
@@ -52,6 +53,9 @@ fn on_update_status_message(
 struct StatusMessageMarker;
 
 #[derive(Component)]
+pub(crate) struct CharacterSelectionText;
+
+#[derive(Component)]
 pub(crate) struct ClientButton;
 
 /// Create a button that allow you to connect/disconnect to a server
@@ -69,6 +73,18 @@ pub(crate) fn spawn_connect_button(app: &mut App) {
             ..default()
         })
         .with_children(|parent| {
+            parent.spawn((
+                Text("Peta [1] / Comini [2]".to_string()),
+                TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                TextFont::from_font_size(16.0),
+                CharacterSelectionText,
+                Node {
+                    padding: UiRect::all(Val::Px(10.0)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+            ));
             parent.spawn((
                 Text("[Client]".to_string()),
                 TextColor(Color::srgb(0.9, 0.9, 0.9).with_alpha(0.4)),
@@ -138,6 +154,19 @@ pub(crate) fn update_button_text(
                 text.0 = "Disconnect".to_string();
             }
         }
+    }
+}
+
+pub(crate) fn update_character_selection_text(
+    selection: Res<SelectedCharacter>,
+    mut query: Query<&mut Text, With<CharacterSelectionText>>,
+) {
+    if !selection.is_changed() {
+        return;
+    }
+    let name = selection.0.display_name();
+    for mut text in &mut query {
+        text.0 = format!("{name} [1=Peta / 2=Comini]");
     }
 }
 

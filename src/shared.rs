@@ -95,9 +95,10 @@ pub(crate) fn move_and_slide(
     }
 }
 
-pub(crate) fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
-    const MOVE_SPEED: f32 = 200.0;
-    for (mut velocity, input) in &mut query {
+pub(crate) fn movement(
+    mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>, &MoveSpeed)>,
+) {
+    for (mut velocity, input, speed) in &mut query {
         let Inputs::Direction(direction) = &input.0;
         let mut dir = Vec2::ZERO;
         if direction.up {
@@ -112,6 +113,6 @@ pub(crate) fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Input
         if direction.right {
             dir.x += 1.0;
         }
-        velocity.0 = dir.normalize_or_zero() * MOVE_SPEED;
+        velocity.0 = dir.normalize_or_zero() * speed.0;
     }
 }

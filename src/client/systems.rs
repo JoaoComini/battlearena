@@ -1,19 +1,53 @@
 use crate::protocol::*;
 use bevy::prelude::*;
+use lightyear::connection::client::Connected;
 use lightyear::prelude::client::input::*;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::*;
+use lightyear::prelude::MessageSender;
 
 pub struct BattleArenaClientPlugin;
 
 impl Plugin for BattleArenaClientPlugin {
     fn build(&self, app: &mut App) {
+        app.init_resource::<SelectedCharacter>();
         app.add_systems(
             FixedPreUpdate,
             buffer_input.in_set(InputSystems::WriteClientInputs),
         );
+        app.add_systems(Update, handle_character_selection_input);
         app.add_observer(handle_predicted_spawn);
         app.add_observer(handle_interpolated_spawn);
+        app.add_observer(send_character_selection);
+    }
+}
+
+/// The character the local player has selected (defaults to Peta).
+#[derive(Resource, Default)]
+pub struct SelectedCharacter(pub CharacterKind);
+
+pub(crate) fn handle_character_selection_input(
+    keypress: Res<ButtonInput<KeyCode>>,
+    mut selection: ResMut<SelectedCharacter>,
+) {
+    if keypress.just_pressed(KeyCode::Digit1) {
+        selection.0 = CharacterKind::Peta;
+    }
+    if keypress.just_pressed(KeyCode::Digit2) {
+        selection.0 = CharacterKind::Comini;
+    }
+}
+
+pub(crate) fn send_character_selection(
+    _trigger: On<Add, Connected>,
+    selection: Res<SelectedCharacter>,
+    mut sender_query: Query<&mut MessageSender<SelectCharacter>>,
+) {
+    if let Ok(mut sender) = sender_query.single_mut() {
+        sender.send::<Channel2>(SelectCharacter(selection.0));
+        info!("Sent character selection: {:?}", selection.0);
+    } else {
+        error!("No MessageSender<SelectCharacter> found on Client entity");
     }
 }
 

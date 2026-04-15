@@ -1,0 +1,11 @@
+(
+    color: (
+        hue: 200.0,
+        saturation: 0.8,
+        lightness: 0.5,
+        alpha: 1.0,
+    ),
+    max_health: 120.0,
+    move_speed: 180.0,
+    attack_type: Melee,
+)
