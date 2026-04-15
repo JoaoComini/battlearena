@@ -49,15 +49,12 @@ impl Plugin for SharedPlugin {
 }
 
 pub fn spawn_scene(mut commands: Commands) {
-    commands.spawn((
-        Floor,
-        Transform::from_xyz(0.0, 0.0, -FLOOR_THICKNESS * 0.5),
-    ));
+    commands.spawn((Floor, Transform::from_xyz(0.0, 0.0, -FLOOR_THICKNESS * 0.5)));
 
     for (x, y) in [
-        ( PILLAR_OFFSET,  PILLAR_OFFSET),
-        (-PILLAR_OFFSET,  PILLAR_OFFSET),
-        ( PILLAR_OFFSET, -PILLAR_OFFSET),
+        (PILLAR_OFFSET, PILLAR_OFFSET),
+        (-PILLAR_OFFSET, PILLAR_OFFSET),
+        (PILLAR_OFFSET, -PILLAR_OFFSET),
         (-PILLAR_OFFSET, -PILLAR_OFFSET),
     ] {
         commands.spawn((

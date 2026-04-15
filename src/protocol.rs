@@ -28,7 +28,6 @@ impl Default for PlayerPhysicsBundle {
 pub(crate) struct PlayerBundle {
     id: PlayerId,
     color: PlayerColor,
-    position: Position,
     physics: PlayerPhysicsBundle,
 }
 
@@ -39,7 +38,6 @@ impl PlayerBundle {
         Self {
             id: PlayerId(id),
             color: PlayerColor(color),
-            position: Position::from(position),
             physics: PlayerPhysicsBundle::default(),
         }
     }

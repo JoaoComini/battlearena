@@ -5,6 +5,7 @@ pub mod server;
 
 use crate::protocol::*;
 use crate::shared::*;
+use avian2d::debug_render::PhysicsDebugPlugin;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::input::native::InputMarker;
@@ -14,6 +15,7 @@ pub struct BattleArenaRendererPlugin;
 
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(PhysicsDebugPlugin::default());
         app.add_systems(Startup, (init, add_scene_meshes).chain());
         app.add_observer(on_player_spawn);
         app.add_observer(on_mesh_spawn);

@@ -51,7 +51,7 @@ bevy-inspector-egui = { version = "0.36", optional = true }
 bevy_egui = { version = "0.39", optional = true }
 tracing = "0.1.40"
 ron = { version = "0.12.0" }
-avian2d = { version = "0.6.1", features = ["serialize"] }
+avian2d = { version = "0.6.1", features = ["serialize", "debug-plugin"] }
 
 [lints.rust]
 dead_code = "allow"
