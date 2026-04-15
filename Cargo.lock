@@ -2560,7 +2560,9 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_egui",
  "clap",
+ "inputs",
  "lightyear",
+ "physics",
  "protocol",
  "renderer",
  "serde",
@@ -4289,6 +4291,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "879f10e63c20629ecabbb64a8010319738c66a5cd0c29b02d63d272b03751d01"
 dependencies = [
  "generic-array",
+]
+
+[[package]]
+name = "inputs"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "lightyear",
+ "serde",
 ]
 
 [[package]]
@@ -6229,6 +6240,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "physics"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "inputs",
+ "lightyear",
+]
+
+[[package]]
 name = "pin-project"
 version = "1.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6460,6 +6481,7 @@ dependencies = [
  "avian2d 0.6.1",
  "bevy",
  "lightyear",
+ "physics",
  "serde",
 ]
 
@@ -6818,6 +6840,7 @@ dependencies = [
  "avian2d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
+ "inputs",
  "lightyear",
  "protocol",
  "shared",
@@ -7180,6 +7203,7 @@ dependencies = [
  "bevy-inspector-egui",
  "bevy_egui",
  "lightyear",
+ "physics",
  "protocol",
  "renderer",
  "ron",
@@ -7225,7 +7249,9 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "inputs",
  "lightyear",
+ "physics",
  "protocol",
 ]
 

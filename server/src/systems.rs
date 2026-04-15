@@ -1,5 +1,5 @@
 use protocol::*;
-use shared::SEND_INTERVAL;
+use shared::{SEND_INTERVAL};
 use bevy::prelude::*;
 use lightyear::connection::client::Connected;
 use lightyear::prelude::server::*;

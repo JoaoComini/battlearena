@@ -1,5 +1,5 @@
 [package]
-name = "shared"
+name = "inputs"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -7,10 +7,7 @@ publish = false
 [dependencies]
 bevy = { workspace = true }
 lightyear = { workspace = true }
-avian2d = { workspace = true }
-protocol = { workspace = true }
-physics = { workspace = true }
-inputs = { workspace = true }
+serde = { workspace = true }
 
 [lints]
 workspace = true

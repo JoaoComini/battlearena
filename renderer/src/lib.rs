@@ -3,9 +3,12 @@ pub mod client;
 #[cfg(feature = "server")]
 pub mod server;
 
+pub const PLAYER_SIZE: f32 = 50.0;
+
 use avian2d::debug_render::PhysicsDebugPlugin;
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use inputs::Inputs;
 use lightyear::prelude::input::native::InputMarker;
 use protocol::*;
 use shared::*;

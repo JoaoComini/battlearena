@@ -15,6 +15,7 @@ lightyear = { workspace = true }
 avian2d = { workspace = true }
 protocol = { workspace = true }
 shared = { workspace = true }
+inputs = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 
 [lints]

@@ -22,6 +22,8 @@ shared = { workspace = true }
 renderer = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 bevy_egui = { workspace = true, optional = true }
+physics = { workspace = true }
+inputs = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,5 +1,5 @@
 [package]
-name = "shared"
+name = "physics"
 version = "0.1.0"
 edition = "2021"
 publish = false
@@ -8,8 +8,6 @@ publish = false
 bevy = { workspace = true }
 lightyear = { workspace = true }
 avian2d = { workspace = true }
-protocol = { workspace = true }
-physics = { workspace = true }
 inputs = { workspace = true }
 
 [lints]

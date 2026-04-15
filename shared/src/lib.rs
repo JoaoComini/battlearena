@@ -1,8 +1,9 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use inputs::InputPlugin;
+use physics::{PhysicsPlugin};
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
-use lightyear::prelude::input::native::ActionState;
 use protocol::*;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
@@ -40,12 +41,8 @@ pub struct SharedPlugin;
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProtocolPlugin);
-        app.add_plugins(PhysicsPlugins::new(FixedUpdate));
-        app.configure_sets(
-            FixedUpdate,
-            PhysicsSystems::StepSimulation.after(move_and_slide),
-        );
-        app.add_systems(FixedUpdate, (movement, move_and_slide).chain());
+        app.add_plugins(PhysicsPlugin);
+        app.add_plugins(InputPlugin);
         app.add_systems(Startup, spawn_scene);
     }
 }
@@ -65,50 +62,5 @@ pub fn spawn_scene(mut commands: Commands) {
             Collider::circle(PILLAR_RADIUS),
             Transform::from_xyz(x, y, PILLAR_HEIGHT * 0.5),
         ));
-    }
-}
-
-pub fn move_and_slide(
-    mut query: Query<(Entity, &mut Transform, &mut LinearVelocity, &Collider)>,
-    move_and_slide: MoveAndSlide,
-    time: Res<Time>,
-) {
-    for (entity, mut transform, mut lin_vel, collider) in &mut query {
-        let MoveAndSlideOutput {
-            position,
-            projected_velocity,
-        } = move_and_slide.move_and_slide(
-            collider,
-            transform.translation.xy(),
-            transform.rotation.to_euler(EulerRot::XYZ).2,
-            lin_vel.0,
-            time.delta(),
-            &MoveAndSlideConfig::default(),
-            &SpatialQueryFilter::from_excluded_entities([entity]),
-            |_| MoveAndSlideHitResponse::Accept,
-        );
-        transform.translation = position.extend(transform.translation.z);
-        lin_vel.0 = projected_velocity;
-    }
-}
-
-pub fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
-    const MOVE_SPEED: f32 = 200.0;
-    for (mut velocity, input) in &mut query {
-        let Inputs::Direction(direction) = &input.0;
-        let mut dir = Vec2::ZERO;
-        if direction.up {
-            dir.y += 1.0;
-        }
-        if direction.down {
-            dir.y -= 1.0;
-        }
-        if direction.left {
-            dir.x -= 1.0;
-        }
-        if direction.right {
-            dir.x += 1.0;
-        }
-        velocity.0 = dir.normalize_or_zero() * MOVE_SPEED;
     }
 }
