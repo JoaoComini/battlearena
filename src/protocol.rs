@@ -19,7 +19,7 @@ impl Default for PlayerPhysicsBundle {
         Self {
             rigid_body: RigidBody::Kinematic,
             custom_position_integration: CustomPositionIntegration,
-            collider: Collider::rectangle(PLAYER_SIZE, PLAYER_SIZE),
+            collider: Collider::circle(PLAYER_SIZE * 0.5),
         }
     }
 }

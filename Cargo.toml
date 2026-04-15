@@ -11,7 +11,7 @@ publish = false
 [features]
 default = ["client", "gui", "server", "netcode", "udp"]
 client = ["lightyear/client"]
-gui = ["gui2d"]
+gui = ["gui3d"]
 server = ["lightyear/server"]
 netcode = ["lightyear/netcode"]
 udp = ["lightyear/udp"]

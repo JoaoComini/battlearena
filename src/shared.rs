@@ -18,6 +18,18 @@ pub struct SharedSettings {
     pub private_key: [u8; 32],
 }
 
+pub const PILLAR_OFFSET: f32 = 300.0;
+pub const PILLAR_RADIUS: f32 = 30.0;
+pub const PILLAR_HEIGHT: f32 = 200.0;
+pub const ARENA_SIZE: f32 = 800.0;
+pub const FLOOR_THICKNESS: f32 = 20.0;
+
+#[derive(Component)]
+pub struct Pillar;
+
+#[derive(Component)]
+pub struct Floor;
+
 pub struct SharedPlugin;
 
 impl Plugin for SharedPlugin {
@@ -32,6 +44,28 @@ impl Plugin for SharedPlugin {
             PhysicsSystems::StepSimulation.after(move_and_slide),
         );
         app.add_systems(FixedUpdate, (movement, move_and_slide).chain());
+        app.add_systems(Startup, spawn_scene);
+    }
+}
+
+pub fn spawn_scene(mut commands: Commands) {
+    commands.spawn((
+        Floor,
+        Transform::from_xyz(0.0, 0.0, -FLOOR_THICKNESS * 0.5),
+    ));
+
+    for (x, y) in [
+        ( PILLAR_OFFSET,  PILLAR_OFFSET),
+        (-PILLAR_OFFSET,  PILLAR_OFFSET),
+        ( PILLAR_OFFSET, -PILLAR_OFFSET),
+        (-PILLAR_OFFSET, -PILLAR_OFFSET),
+    ] {
+        commands.spawn((
+            Pillar,
+            RigidBody::Static,
+            Collider::circle(PILLAR_RADIUS),
+            Transform::from_xyz(x, y, PILLAR_HEIGHT * 0.5),
+        ));
     }
 }
 
