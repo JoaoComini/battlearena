@@ -19,7 +19,7 @@ impl Default for PlayerPhysicsBundle {
         Self {
             rigid_body: RigidBody::Kinematic,
             custom_position_integration: CustomPositionIntegration,
-            collider: Collider::rectangle(PLAYER_SIZE, PLAYER_SIZE),
+            collider: Collider::circle(PLAYER_SIZE * 0.5),
         }
     }
 }
@@ -28,7 +28,6 @@ impl Default for PlayerPhysicsBundle {
 pub(crate) struct PlayerBundle {
     id: PlayerId,
     color: PlayerColor,
-    position: Position,
     physics: PlayerPhysicsBundle,
 }
 
@@ -39,7 +38,6 @@ impl PlayerBundle {
         Self {
             id: PlayerId(id),
             color: PlayerColor(color),
-            position: Position::from(position),
             physics: PlayerPhysicsBundle::default(),
         }
     }

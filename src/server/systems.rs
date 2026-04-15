@@ -40,6 +40,7 @@ pub(crate) fn handle_connected(
                 owner: trigger.entity,
                 lifetime: Default::default(),
             },
+            DisableReplicateHierarchy,
         ))
         .id();
     info!(
