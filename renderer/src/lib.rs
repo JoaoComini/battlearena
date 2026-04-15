@@ -1,16 +1,15 @@
-#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "client"))]
+#[cfg(feature = "client")]
 pub mod client;
-#[cfg(all(any(feature = "gui2d", feature = "gui3d"), feature = "server"))]
+#[cfg(feature = "server")]
 pub mod server;
 
-use crate::protocol::*;
-use crate::shared::*;
 use avian2d::debug_render::PhysicsDebugPlugin;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::input::native::InputMarker;
+use protocol::*;
+use shared::*;
 
-#[derive(Clone)]
 pub struct BattleArenaRendererPlugin;
 
 impl Plugin for BattleArenaRendererPlugin {
@@ -121,8 +120,6 @@ fn on_player_spawn(
     commands.entity(entity).add_child(visual);
 }
 
-/// Rotate every spawned Mesh3d 90° around X so meshes authored in Y-up space
-/// display correctly in avian's XY/Z-up world.
 fn on_mesh_spawn(trigger: On<Add, Mesh3d>, mut transforms: Query<&mut Transform>) {
     if let Ok(mut transform) = transforms.get_mut(trigger.entity) {
         transform.rotation *= Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);

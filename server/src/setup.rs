@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use core::time::Duration;
 use ron;
 
-use crate::shared::SharedSettings;
+use shared::SharedSettings;
 use async_compat::Compat;
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;

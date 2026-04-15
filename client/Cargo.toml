@@ -1,0 +1,27 @@
+[package]
+name = "client"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+default = ["gui", "udp"]
+gui = ["renderer/gui", "renderer/client", "bevy/3d", "bevy/3d_bevy_render", "bevy/3d_api", "dep:bevy-inspector-egui"]
+udp = ["lightyear/udp"]
+steam = ["lightyear/steam"]
+
+[dependencies]
+bevy = { workspace = true }
+lightyear = { workspace = true }
+avian2d = { workspace = true }
+serde = { workspace = true }
+clap = { workspace = true }
+tracing = { workspace = true }
+protocol = { workspace = true }
+shared = { workspace = true }
+renderer = { workspace = true }
+bevy-inspector-egui = { workspace = true, optional = true }
+bevy_egui = { workspace = true, optional = true }
+
+[lints]
+workspace = true

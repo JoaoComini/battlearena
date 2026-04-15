@@ -1,0 +1,21 @@
+[package]
+name = "renderer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+client = []
+server = []
+gui = ["dep:bevy-inspector-egui", "bevy/3d", "bevy/3d_bevy_render", "bevy/3d_api"]
+
+[dependencies]
+bevy = { workspace = true }
+lightyear = { workspace = true }
+avian2d = { workspace = true }
+protocol = { workspace = true }
+shared = { workspace = true }
+bevy-inspector-egui = { workspace = true, optional = true }
+
+[lints]
+workspace = true

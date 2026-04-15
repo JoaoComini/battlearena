@@ -1,9 +1,9 @@
-use crate::protocol::*;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use lightyear::prelude::input::native::ActionState;
+use protocol::*;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
 pub const SERVER_PORT: u16 = 5888;
@@ -17,6 +17,11 @@ pub struct SharedSettings {
     pub protocol_id: u64,
     pub private_key: [u8; 32],
 }
+
+pub const SHARED_SETTINGS: SharedSettings = SharedSettings {
+    protocol_id: 0,
+    private_key: [0; 32],
+};
 
 pub const PILLAR_OFFSET: f32 = 300.0;
 pub const PILLAR_RADIUS: f32 = 30.0;
@@ -35,9 +40,6 @@ pub struct SharedPlugin;
 impl Plugin for SharedPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(ProtocolPlugin);
-        // Run physics in FixedUpdate, after our movement systems.
-        // This ensures transform_to_position syncs our Transform writes into Position
-        // before lightyear's UpdateHistory snapshots Position in FixedPostUpdate.
         app.add_plugins(PhysicsPlugins::new(FixedUpdate));
         app.configure_sets(
             FixedUpdate,
@@ -66,12 +68,7 @@ pub fn spawn_scene(mut commands: Commands) {
     }
 }
 
-pub const SHARED_SETTINGS: SharedSettings = SharedSettings {
-    protocol_id: 0,
-    private_key: [0; 32],
-};
-
-pub(crate) fn move_and_slide(
+pub fn move_and_slide(
     mut query: Query<(Entity, &mut Transform, &mut LinearVelocity, &Collider)>,
     move_and_slide: MoveAndSlide,
     time: Res<Time>,
@@ -95,7 +92,7 @@ pub(crate) fn move_and_slide(
     }
 }
 
-pub(crate) fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
+pub fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
     const MOVE_SPEED: f32 = 200.0;
     for (mut velocity, input) in &mut query {
         let Inputs::Direction(direction) = &input.0;

@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 
 pub struct BattleArenaServerRendererPlugin {
-    /// The name of the example, which must also match the edgegap application name.
     pub name: String,
 }
 

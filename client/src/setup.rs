@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 
-use crate::shared::SharedSettings;
+use shared::SharedSettings;
 use bevy::ecs::lifecycle::HookContext;
 use bevy::ecs::world::DeferredWorld;
 use lightyear::netcode::client_plugin::NetcodeConfig;

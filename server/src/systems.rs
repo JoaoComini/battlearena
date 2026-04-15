@@ -1,5 +1,5 @@
-use crate::protocol::*;
-use crate::shared::SEND_INTERVAL;
+use protocol::*;
+use shared::SEND_INTERVAL;
 use bevy::prelude::*;
 use lightyear::connection::client::Connected;
 use lightyear::prelude::server::*;

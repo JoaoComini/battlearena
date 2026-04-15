@@ -706,23 +706,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2af50177e190e07a26ab74f8b1efbfe2ef87da2116221318cb1c2e82baf7de06"
 
 [[package]]
-name = "battle_arena"
-version = "0.1.0"
-dependencies = [
- "async-compat",
- "avian2d 0.6.1",
- "bevy",
- "bevy-inspector-egui",
- "bevy_egui",
- "cfg-if",
- "clap",
- "lightyear",
- "ron",
- "serde",
- "tracing",
-]
-
-[[package]]
 name = "bevy"
 version = "0.18.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2567,6 +2550,23 @@ name = "clap_lex"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
+
+[[package]]
+name = "client"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_egui",
+ "clap",
+ "lightyear",
+ "protocol",
+ "renderer",
+ "serde",
+ "shared",
+ "tracing",
+]
 
 [[package]]
 name = "clipboard-win"
@@ -6454,6 +6454,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3eb8486b569e12e2c32ad3e204dbaba5e4b5b216e9367044f25f1dba42341773"
 
 [[package]]
+name = "protocol"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "lightyear",
+ "serde",
+]
+
+[[package]]
 name = "pxfm"
 version = "0.1.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6800,6 +6810,18 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "renderer"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "bevy-inspector-egui",
+ "lightyear",
+ "protocol",
+ "shared",
+]
 
 [[package]]
 name = "ring"
@@ -7149,6 +7171,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "server"
+version = "0.1.0"
+dependencies = [
+ "async-compat",
+ "avian2d 0.6.1",
+ "bevy",
+ "bevy-inspector-egui",
+ "bevy_egui",
+ "lightyear",
+ "protocol",
+ "renderer",
+ "ron",
+ "serde",
+ "shared",
+ "tracing",
+]
+
+[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7177,6 +7217,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shared"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "lightyear",
+ "protocol",
 ]
 
 [[package]]

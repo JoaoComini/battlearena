@@ -5,7 +5,6 @@ use lightyear::prelude::client::*;
 use lightyear::prelude::*;
 
 pub struct BattleArenaClientRendererPlugin {
-    /// The name of the example, which must also match the edgegap application name.
     pub name: String,
 }
 
@@ -52,10 +51,9 @@ fn on_update_status_message(
 struct StatusMessageMarker;
 
 #[derive(Component)]
-pub(crate) struct ClientButton;
+pub struct ClientButton;
 
-/// Create a button that allow you to connect/disconnect to a server
-pub(crate) fn spawn_connect_button(app: &mut App) {
+pub fn spawn_connect_button(app: &mut App) {
     app.world_mut()
         .spawn(Node {
             width: Val::Percent(30.0),
@@ -91,9 +89,7 @@ pub(crate) fn spawn_connect_button(app: &mut App) {
                         width: Val::Px(150.0),
                         height: Val::Px(65.0),
                         border: UiRect::all(Val::Px(5.0)),
-                        // horizontally center child text
                         justify_content: JustifyContent::Center,
-                        // vertically center child text
                         align_items: AlignItems::Center,
                         ..default()
                     },
@@ -119,7 +115,7 @@ pub(crate) fn spawn_connect_button(app: &mut App) {
         });
 }
 
-pub(crate) fn update_button_text(
+pub fn update_button_text(
     client: Single<&Client>,
     mut text_query: Query<&mut Text, (With<Button>, With<ClientButton>)>,
 ) {
@@ -141,14 +137,10 @@ pub(crate) fn update_button_text(
     }
 }
 
-/// Component to identify the text displaying the client id
-
 #[derive(Component)]
 pub struct ClientIdText;
 
-/// Listen for events to know when the client is connected, and spawn a text entity
-/// to display the client id
-pub(crate) fn handle_connection(
+pub fn handle_connection(
     trigger: On<Add, Connected>,
     query: Query<&LocalId, Or<((With<LinkOf>, With<Client>), Without<LinkOf>)>>,
     mut commands: Commands,
@@ -162,9 +154,7 @@ pub(crate) fn handle_connection(
     }
 }
 
-/// Listen for events to know when the client is disconnected, and print out the reason
-/// of the disconnection
-pub(crate) fn handle_disconnection(
+pub fn handle_disconnection(
     trigger: On<Add, Disconnected>,
     mut commands: Commands,
     debug_text: Query<Entity, With<ClientIdText>>,

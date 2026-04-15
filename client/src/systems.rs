@@ -1,4 +1,4 @@
-use crate::protocol::*;
+use protocol::*;
 use bevy::prelude::*;
 use lightyear::prelude::client::input::*;
 use lightyear::prelude::input::native::*;

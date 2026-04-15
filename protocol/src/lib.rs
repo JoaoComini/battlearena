@@ -8,10 +8,10 @@ pub const PLAYER_SIZE: f32 = 50.0;
 
 // Player
 #[derive(Bundle)]
-pub(crate) struct PlayerPhysicsBundle {
-    pub(crate) rigid_body: RigidBody,
-    pub(crate) custom_position_integration: CustomPositionIntegration,
-    pub(crate) collider: Collider,
+pub struct PlayerPhysicsBundle {
+    pub rigid_body: RigidBody,
+    pub custom_position_integration: CustomPositionIntegration,
+    pub collider: Collider,
 }
 
 impl Default for PlayerPhysicsBundle {
@@ -25,14 +25,14 @@ impl Default for PlayerPhysicsBundle {
 }
 
 #[derive(Bundle)]
-pub(crate) struct PlayerBundle {
-    id: PlayerId,
-    color: PlayerColor,
-    physics: PlayerPhysicsBundle,
+pub struct PlayerBundle {
+    pub id: PlayerId,
+    pub color: PlayerColor,
+    pub physics: PlayerPhysicsBundle,
 }
 
 impl PlayerBundle {
-    pub(crate) fn new(id: PeerId, position: Vec2) -> Self {
+    pub fn new(id: PeerId, position: Vec2) -> Self {
         let h = (((id.to_bits().wrapping_mul(30)) % 360) as f32) / 360.0;
         let color = Color::hsl(h, 0.8, 0.5);
         Self {
@@ -46,10 +46,10 @@ impl PlayerBundle {
 // Components
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct PlayerId(pub(crate) PeerId);
+pub struct PlayerId(pub PeerId);
 
 #[derive(Component, Deserialize, Serialize, Clone, Debug, PartialEq)]
-pub struct PlayerColor(pub(crate) Color);
+pub struct PlayerColor(pub Color);
 
 // Channels
 pub struct Channel1;
@@ -58,14 +58,14 @@ pub struct Channel1;
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq, Eq, Clone, Reflect)]
 pub struct Direction {
-    pub(crate) up: bool,
-    pub(crate) down: bool,
-    pub(crate) left: bool,
-    pub(crate) right: bool,
+    pub up: bool,
+    pub down: bool,
+    pub left: bool,
+    pub right: bool,
 }
 
 impl Direction {
-    pub(crate) fn is_none(&self) -> bool {
+    pub fn is_none(&self) -> bool {
         !self.up && !self.down && !self.left && !self.right
     }
 }
@@ -96,9 +96,7 @@ impl Plugin for ProtocolPlugin {
 
         // components
         app.register_component::<PlayerId>();
-
         app.register_component::<PlayerColor>();
-
         app.register_component::<Position>()
             .add_prediction()
             .add_should_rollback(|a: &Position, b: &Position| (a.0 - b.0).length() >= 0.001)
