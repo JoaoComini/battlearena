@@ -1,7 +1,10 @@
+use avian2d::physics_transform::{
+    ApplyPosToTransform, PhysicsTransformConfig, PhysicsTransformSystems,
+};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use inputs::Inputs;
-use lightyear::prelude::input::native::ActionState;
+use lightyear::prelude::{input::native::ActionState, PredictionSystems};
 
 pub const PLAYER_SIZE: f32 = 50.0;
 
@@ -32,22 +35,63 @@ pub struct PhysicsPlugin;
 
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(PhysicsPlugins::new(FixedUpdate));
-        app.configure_sets(
+        app.insert_resource(PhysicsTransformConfig {
+            position_to_transform: false,
+            transform_to_position: false,
+            ..default()
+        });
+
+        app.register_required_components::<Position, Transform>();
+        app.register_required_components::<Rotation, Transform>();
+        app.register_required_components::<Position, ApplyPosToTransform>();
+        app.register_required_components::<Rotation, ApplyPosToTransform>();
+
+        app.add_plugins(PhysicsPlugins::default());
+
+        app.add_systems(
             FixedUpdate,
-            PhysicsSystems::StepSimulation.after(apply_move_and_slide),
+            (movement, set_rotation, move_and_slide, apply_move_and_slide).chain(),
         );
-        app.add_systems(FixedUpdate, (
-                movement,
-                set_rotation,
-                move_and_slide,
-                apply_move_and_slide,
-        ).chain());
+
+        app.configure_sets(
+            FixedPostUpdate,
+            (
+                PhysicsSystems::StepSimulation,
+                PredictionSystems::UpdateHistory,
+            )
+                .chain(),
+        );
+
+        app.configure_sets(
+            FixedPostUpdate,
+            PhysicsTransformSystems::PositionToTransform.in_set(PhysicsSystems::Writeback),
+        );
+
+        app.add_systems(
+            FixedPostUpdate,
+            position_to_transform.in_set(PhysicsTransformSystems::PositionToTransform),
+        );
+    }
+}
+
+pub fn position_to_transform(
+    mut query: Query<(&Position, &Rotation, &mut Transform), With<ApplyPosToTransform>>,
+) {
+    for (pos, rot, mut transform) in &mut query {
+        transform.translation = Vec3::new(pos.x, 0.0, -pos.y);
+        transform.rotation = Quat::from_rotation_y(-rot.as_radians());
     }
 }
 
 pub fn move_and_slide(
-    mut query: Query<(Entity, &Position, &LinearVelocity, &Collider, &Rotation, &mut MoveAndSlideResult)>,
+    mut query: Query<(
+        Entity,
+        &Position,
+        &LinearVelocity,
+        &Collider,
+        &Rotation,
+        &mut MoveAndSlideResult,
+    )>,
     move_and_slide: MoveAndSlide,
     time: Res<Time>,
 ) {

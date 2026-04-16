@@ -17,18 +17,16 @@ pub struct BattleArenaRendererPlugin;
 
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(PhysicsDebugPlugin::default());
         app.add_systems(Startup, (init, add_scene_meshes).chain());
         app.add_observer(on_player_spawn);
-        app.add_observer(on_mesh_spawn);
-        app.add_systems(Update, follow_local_player);
+        app.add_systems(PostUpdate, follow_local_player);
     }
 }
 
 fn init(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, -300.0, 500.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 300.0, 500.0).looking_at(Vec3::ZERO, Vec3::Y),
         Projection::Perspective(PerspectiveProjection {
             fov: 60_f32.to_radians(),
             ..default()
@@ -79,7 +77,7 @@ fn add_scene_meshes(
             .spawn((
                 Mesh3d(meshes.add(Cylinder::new(PILLAR_RADIUS, PILLAR_HEIGHT))),
                 MeshMaterial3d(pillar_material.clone()),
-                Transform::default(),
+                Transform::from_xyz(0.0, PILLAR_HEIGHT * 0.5, 0.0),
             ))
             .id();
         commands.entity(entity).add_child(visual);
@@ -115,7 +113,7 @@ fn on_player_spawn(
         .spawn((
             Mesh3d(mesh),
             MeshMaterial3d(material),
-            Transform::from_xyz(0.0, 0.0, half_height),
+            Transform::from_xyz(0.0, half_height, 0.0),
             PlayerVisual,
         ))
         .id();
@@ -123,23 +121,18 @@ fn on_player_spawn(
     commands.entity(entity).add_child(visual);
 }
 
-fn on_mesh_spawn(trigger: On<Add, Mesh3d>, mut transforms: Query<&mut Transform>) {
-    if let Ok(mut transform) = transforms.get_mut(trigger.entity) {
-        transform.rotation *= Quat::from_rotation_x(std::f32::consts::FRAC_PI_2);
-    }
-}
-
 fn follow_local_player(
-    local_player: Query<&Position, With<InputMarker<Inputs>>>,
+    local_player: Query<&Transform, (With<InputMarker<Inputs>>, Without<Camera3d>)>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
 ) {
-    let Ok(position) = local_player.single() else {
+    let Ok(transform) = local_player.single() else {
         return;
     };
     let Ok(mut camera_transform) = camera.single_mut() else {
         return;
     };
 
-    camera_transform.translation = Vec3::new(position.x, position.y - 300.0, 500.0);
-    camera_transform.look_at(Vec3::new(position.x, position.y, 0.0), Vec3::Y);
+    let target = transform.translation;
+    camera_transform.translation = Vec3::new(target.x, target.y + 300.0, target.z + 500.0);
+    camera_transform.look_at(target, Vec3::Y);
 }

@@ -1,16 +1,16 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use inputs::InputPlugin;
-use physics::{PhysicsPlugin};
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
+use inputs::InputPlugin;
+use physics::PhysicsPlugin;
 use protocol::*;
 
-pub const FIXED_TIMESTEP_HZ: f64 = 64.0;
+pub const FIXED_TIMESTEP_HZ: f64 = 60.0;
 pub const SERVER_PORT: u16 = 5888;
 pub const CLIENT_PORT: u16 = 0;
 pub const SERVER_ADDR: SocketAddr = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), SERVER_PORT);
-pub const SEND_INTERVAL: Duration = Duration::from_millis(16);
+pub const SEND_INTERVAL: Duration = Duration::from_nanos(1e9 as u64 / 60);
 pub const STEAM_APP_ID: u32 = 480;
 
 #[derive(Copy, Clone, Debug)]
@@ -60,7 +60,7 @@ pub fn spawn_scene(mut commands: Commands) {
             Pillar,
             RigidBody::Static,
             Collider::circle(PILLAR_RADIUS),
-            Transform::from_xyz(x, y, PILLAR_HEIGHT * 0.5),
+            Position::from_xy(x, y),
         ));
     }
 }
