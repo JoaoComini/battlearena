@@ -1,5 +1,5 @@
 [workspace]
-members = ["protocol", "shared", "renderer", "client", "server"]
+members = ["protocol", "shared", "renderer", "client", "server", "scene"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -20,6 +20,7 @@ shared = { path = "shared" }
 renderer = { path = "renderer" }
 physics = { path = "physics" }
 inputs = { path = "inputs" }
+scene = { path = "scene" }
 
 [workspace.lints.rust]
 dead_code = "allow"

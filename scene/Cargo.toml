@@ -1,0 +1,13 @@
+[package]
+name = "scene"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = { workspace = true }
+avian2d = { workspace = true }
+serde = { workspace = true }
+ron = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3"
