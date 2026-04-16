@@ -1,10 +1,10 @@
 mod components;
-mod save;
 mod load;
+mod save;
 
 pub use components::GltfNodeRef;
-pub use save::{save_scene, SaveSceneError};
 pub use load::load_scene;
+pub use save::{save_scene, SaveSceneError};
 
 use bevy::gltf::{GltfAssetLabel, GltfMesh, GltfNode};
 use bevy::prelude::*;
@@ -13,7 +13,6 @@ pub struct ScenePlugin;
 
 impl Plugin for ScenePlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<GltfNodeRef>();
         app.add_systems(Update, resolve_gltf_node_refs);
     }
 }
@@ -53,10 +52,8 @@ fn resolve_gltf_node_refs(
             .primitives
             .iter()
             .map(|primitive| {
-                let mut child = commands.spawn((
-                    Mesh3d(primitive.mesh.clone()),
-                    Transform::default(),
-                ));
+                let mut child =
+                    commands.spawn((Mesh3d(primitive.mesh.clone()), Transform::default()));
                 if let Some(material) = primitive.material.clone() {
                     child.insert(MeshMaterial3d(material));
                 }
