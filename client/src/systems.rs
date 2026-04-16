@@ -57,7 +57,7 @@ pub(crate) fn buffer_input(
                     if t > 0.0 {
                         let world_pos = (ray.origin + ray.direction * t).xy();
                         let player_pos = position.0;
-                        direction.angle = (world_pos - player_pos).to_angle();
+                        direction.angle = (world_pos - player_pos).to_angle() - std::f32::consts::FRAC_PI_2;
                     }
                 }
             }

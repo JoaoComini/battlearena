@@ -5,9 +5,8 @@ pub mod server;
 
 pub const PLAYER_SIZE: f32 = 50.0;
 
-use avian2d::debug_render::PhysicsDebugPlugin;
 use avian2d::prelude::*;
-use bevy::prelude::*;
+use bevy::{color::palettes::css::BLUE, prelude::*};
 use inputs::Inputs;
 use lightyear::prelude::input::native::InputMarker;
 use protocol::*;
@@ -19,6 +18,7 @@ impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, (init, add_scene_meshes).chain());
         app.add_observer(on_player_spawn);
+        app.add_systems(Update, draw_player_foward);
         app.add_systems(PostUpdate, follow_local_player);
     }
 }
@@ -26,7 +26,7 @@ impl Plugin for BattleArenaRendererPlugin {
 fn init(mut commands: Commands) {
     commands.spawn((
         Camera3d::default(),
-        Transform::from_xyz(0.0, 300.0, 500.0).looking_at(Vec3::ZERO, Vec3::Y),
+        Transform::from_xyz(0.0, 600.0, 500.0).looking_at(Vec3::ZERO, Vec3::Y),
         Projection::Perspective(PerspectiveProjection {
             fov: 60_f32.to_radians(),
             ..default()
@@ -103,7 +103,7 @@ fn on_player_spawn(
     let capsule_radius = PLAYER_SIZE * 0.35;
     let half_height = capsule_height * 0.5 + capsule_radius;
 
-    let mesh = meshes.add(Capsule3d::new(capsule_radius, capsule_height));
+    let visual_mesh = meshes.add(Capsule3d::new(capsule_radius, capsule_height));
     let material = materials.add(StandardMaterial {
         base_color: color.0,
         ..default()
@@ -111,8 +111,8 @@ fn on_player_spawn(
 
     let visual = commands
         .spawn((
-            Mesh3d(mesh),
-            MeshMaterial3d(material),
+            Mesh3d(visual_mesh),
+            MeshMaterial3d(material.clone()),
             Transform::from_xyz(0.0, half_height, 0.0),
             PlayerVisual,
         ))
@@ -133,6 +133,18 @@ fn follow_local_player(
     };
 
     let target = transform.translation;
-    camera_transform.translation = Vec3::new(target.x, target.y + 300.0, target.z + 500.0);
+    camera_transform.translation = Vec3::new(target.x, target.y + 600.0, target.z + 500.0);
     camera_transform.look_at(target, Vec3::Y);
+}
+
+fn draw_player_foward(player: Query<&Transform, With<InputMarker<Inputs>>>, mut gizmos: Gizmos) {
+    let Ok(transform) = player.single() else {
+        return;
+    };
+
+    gizmos.arrow(
+        transform.translation + Vec3::Y * PLAYER_SIZE,
+        transform.translation + (Vec3::Y * PLAYER_SIZE + transform.forward() * PLAYER_SIZE),
+        BLUE,
+    );
 }

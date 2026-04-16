@@ -79,7 +79,7 @@ pub fn position_to_transform(
 ) {
     for (pos, rot, mut transform) in &mut query {
         transform.translation = Vec3::new(pos.x, 0.0, -pos.y);
-        transform.rotation = Quat::from_rotation_y(-rot.as_radians());
+        transform.rotation = Quat::from_rotation_y(rot.as_radians());
     }
 }
 
