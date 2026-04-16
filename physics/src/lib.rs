@@ -50,7 +50,13 @@ impl Plugin for PhysicsPlugin {
 
         app.add_systems(
             FixedUpdate,
-            (movement, set_rotation, move_and_slide, apply_move_and_slide).chain(),
+            (
+                set_lin_velocity,
+                set_rotation,
+                move_and_slide,
+                apply_move_and_slide,
+            )
+                .chain(),
         );
 
         app.configure_sets(
@@ -122,7 +128,7 @@ pub fn apply_move_and_slide(
     }
 }
 
-pub fn movement(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
+pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
     const MOVE_SPEED: f32 = 200.0;
     for (mut velocity, input) in &mut query {
         let Inputs::Direction(direction) = &input.0;

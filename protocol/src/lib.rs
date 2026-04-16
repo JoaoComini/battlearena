@@ -4,14 +4,12 @@ use lightyear::prelude::*;
 use physics::PlayerPhysicsBundle;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub id: PlayerId,
     pub color: PlayerColor,
     pub physics: PlayerPhysicsBundle,
 }
-
 
 impl PlayerBundle {
     pub fn new(id: PeerId, position: Vec2) -> Self {
@@ -28,6 +26,9 @@ impl PlayerBundle {
 // Components
 
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct LocalPlayer;
+
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PlayerId(pub PeerId);
 
 #[derive(Component, Deserialize, Serialize, Clone, Debug, PartialEq)]
@@ -42,7 +43,6 @@ pub struct ProtocolPlugin;
 
 impl Plugin for ProtocolPlugin {
     fn build(&self, app: &mut App) {
-
         // components
         app.register_component::<PlayerId>();
         app.register_component::<PlayerColor>();

@@ -7,8 +7,6 @@ pub const PLAYER_SIZE: f32 = 50.0;
 
 use avian2d::prelude::*;
 use bevy::{color::palettes::css::BLUE, prelude::*};
-use inputs::Inputs;
-use lightyear::prelude::input::native::InputMarker;
 use protocol::*;
 use shared::*;
 
@@ -122,7 +120,7 @@ fn on_player_spawn(
 }
 
 fn follow_local_player(
-    local_player: Query<&Transform, (With<InputMarker<Inputs>>, Without<Camera3d>)>,
+    local_player: Query<&Transform, (With<LocalPlayer>, Without<Camera3d>)>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
 ) {
     let Ok(transform) = local_player.single() else {
@@ -137,7 +135,7 @@ fn follow_local_player(
     camera_transform.look_at(target, Vec3::Y);
 }
 
-fn draw_player_foward(player: Query<&Transform, With<InputMarker<Inputs>>>, mut gizmos: Gizmos) {
+fn draw_player_foward(player: Query<&Transform, With<LocalPlayer>>, mut gizmos: Gizmos) {
     let Ok(transform) = player.single() else {
         return;
     };
