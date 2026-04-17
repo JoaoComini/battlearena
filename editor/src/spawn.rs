@@ -1,7 +1,7 @@
-use crate::free_camera::FreeCamera;
+use bevy::ecs::system::SystemState;
 use bevy::gltf::{Gltf, GltfMesh, GltfNode};
 use bevy::prelude::*;
-use scene::{load_scene, GltfPrimitiveRef};
+use scene::{load, spawn as spawn_scene, GltfPrimitiveRef};
 
 /// Marks an entity as editable and visible in the hierarchy panel.
 #[derive(Component, Reflect, Default)]
@@ -55,7 +55,7 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn((
         Camera3d::default(),
         Transform::from_xyz(0.0, 5.0, 10.0).looking_at(Vec3::ZERO, Vec3::Y),
-        FreeCamera,
+        crate::free_camera::FreeCamera,
     ));
 
     commands.spawn((
@@ -73,54 +73,93 @@ fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 
 /// Waits for the `Gltf` asset to load, then either loads the saved scene or
 /// spawns entities from the GLTF nodes directly.
-fn spawn_gltf_nodes(
-    mut commands: Commands,
-    mut open: ResMut<OpenGltf>,
-    gltf_assets: Res<Assets<Gltf>>,
-    gltf_nodes: Res<Assets<GltfNode>>,
-    gltf_meshes: Res<Assets<GltfMesh>>,
-    asset_server: Res<AssetServer>,
-    mut scene_spawner: ResMut<SceneSpawner>,
-) {
-    if open.spawned {
-        return;
+fn spawn_gltf_nodes(world: &mut World) {
+    // Check whether we should proceed.
+    {
+        let open = world.resource::<OpenGltf>();
+        if open.spawned {
+            return;
+        }
+        let gltf_assets = world.resource::<Assets<Gltf>>();
+        if gltf_assets.get(&open.handle.clone()).is_none() {
+            return;
+        }
     }
 
-    let Some(gltf) = gltf_assets.get(&open.handle) else {
-        return;
-    };
-
-    let scene_fs_path = asset_fs_path(&open.scene_path);
+    let scene_fs_path = asset_fs_path(&world.resource::<OpenGltf>().scene_path);
 
     if scene_fs_path.exists() {
-        load_scene(&asset_server, &mut scene_spawner, &open.scene_path);
-        info!("Loaded scene from {}", scene_fs_path.display());
+        world.resource_mut::<OpenGltf>().spawned = true;
+
+        match load(&scene_fs_path) {
+            Ok(scene_file) => {
+                // Snapshot existing entity IDs before spawning so we can
+                // identify the newly created ones afterward.
+                let before: std::collections::HashSet<Entity> =
+                    world.query::<Entity>().iter(world).collect();
+
+                spawn_scene(&scene_file, world);
+
+                // Mark every newly spawned entity as Editable.
+                let new_entities: Vec<Entity> = world
+                    .query::<Entity>()
+                    .iter(world)
+                    .filter(|id| !before.contains(id))
+                    .collect();
+                for id in new_entities {
+                    world.entity_mut(id).insert(Editable);
+                }
+
+                info!("Loaded scene from {}", scene_fs_path.display());
+            }
+            Err(e) => error!("Failed to load scene: {e}"),
+        }
     } else {
         // No scene file — bootstrap from GLTF nodes.
-        for node_handle in gltf.nodes.iter() {
-            let Some(node) = gltf_nodes.get(node_handle) else {
-                continue;
-            };
-            let Some(mesh_handle) = &node.mesh else {
-                continue;
-            };
-            let Some(gltf_mesh) = gltf_meshes.get(mesh_handle) else {
-                continue;
-            };
+        let mut state: SystemState<(
+            Res<OpenGltf>,
+            Res<Assets<Gltf>>,
+            Res<Assets<GltfNode>>,
+            Res<Assets<GltfMesh>>,
+        )> = SystemState::new(world);
 
-            let mut transform = node.transform;
-            transform.scale *= 100.0;
+        let (open, gltf_assets, gltf_nodes, gltf_meshes) = state.get(world);
 
-            let primitive_entities: Vec<Entity> = gltf_mesh
-                .primitives
+        let gltf = gltf_assets.get(&open.handle).unwrap();
+
+        // Collect all the data we need before dropping the borrows.
+        let nodes: Vec<(String, Transform, String, Vec<(usize, usize)>)> = gltf
+            .nodes
+            .iter()
+            .filter_map(|h| gltf_nodes.get(h))
+            .filter_map(|node| {
+                let mesh_handle = node.mesh.as_ref()?;
+                let gltf_mesh = gltf_meshes.get(mesh_handle)?;
+                let primitives = gltf_mesh
+                    .primitives
+                    .iter()
+                    .map(|p| (gltf_mesh.index, p.index))
+                    .collect();
+                let mut transform = node.transform;
+                transform.scale *= 100.0;
+                Some((node.name.clone(), transform, open.path.clone(), primitives))
+            })
+            .collect();
+
+        drop((open, gltf_assets, gltf_nodes, gltf_meshes));
+
+        world.resource_mut::<OpenGltf>().spawned = true;
+
+        for (name, transform, path, primitives) in nodes {
+            let children: Vec<Entity> = primitives
                 .iter()
-                .map(|primitive| {
-                    commands
+                .map(|(mesh_index, primitive_index)| {
+                    world
                         .spawn((
                             GltfPrimitiveRef {
-                                path: open.path.clone(),
-                                mesh_index: gltf_mesh.index,
-                                primitive_index: primitive.index,
+                                path: path.clone(),
+                                mesh_index: *mesh_index,
+                                primitive_index: *primitive_index,
                             },
                             Editable,
                             Transform::default(),
@@ -129,14 +168,8 @@ fn spawn_gltf_nodes(
                 })
                 .collect();
 
-            let mut node_entity = commands.spawn((
-                Name::new(node.name.clone()),
-                Editable,
-                transform,
-            ));
-            node_entity.add_children(&primitive_entities);
+            let node_id = world.spawn((Name::new(name), Editable, transform)).id();
+            world.entity_mut(node_id).add_children(&children);
         }
     }
-
-    open.spawned = true;
 }

@@ -1,7 +1,7 @@
 use avian2d::prelude::{ColliderConstructor, RigidBody};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use scene::{save_scene, GltfPrimitiveRef};
+use scene::{save, GltfPrimitiveRef};
 
 use crate::selection::SelectedEntity;
 use crate::spawn::{asset_fs_path, Editable, OpenGltf};
@@ -220,9 +220,8 @@ fn save_scene_system(world: &mut World) {
         .map(|o| asset_fs_path(&o.scene_path))
         .unwrap_or_else(|| asset_fs_path("scene.scn.ron"));
 
-    if let Err(e) = save_scene::<With<Editable>>(world, &scene_path) {
-        error!("Failed to save scene: {e}");
-    } else {
-        info!("Scene saved to {}", scene_path.display());
+    match save::<With<Editable>>(world, &scene_path) {
+        Ok(()) => info!("Scene saved to {}", scene_path.display()),
+        Err(e) => error!("Failed to save scene: {e}"),
     }
 }

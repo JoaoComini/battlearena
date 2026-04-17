@@ -1,10 +1,12 @@
 mod components;
+pub mod format;
 mod load;
 mod save;
 
 pub use components::GltfPrimitiveRef;
-pub use load::load_scene;
-pub use save::{save_scene, SaveSceneError};
+pub use load::{load, spawn, LoadError};
+pub use save::{save, SaveError};
+pub use format::SceneFile;
 
 use bevy::gltf::{GltfAssetLabel, GltfMesh};
 use bevy::prelude::*;
