@@ -17,14 +17,26 @@ impl Direction {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone, Reflect)]
+pub struct AbilityInput {
+    pub slot1: bool, // Q key
+    pub slot2: bool, // E key
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq, Clone, Reflect)]
+pub struct PlayerInput {
+    pub movement: Direction,
+    pub abilities: AbilityInput,
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Reflect)]
 pub enum Inputs {
-    Direction(Direction),
+    PlayerInput(PlayerInput),
 }
 
 impl Default for Inputs {
     fn default() -> Self {
-        Self::Direction(Direction::default())
+        Self::PlayerInput(PlayerInput::default())
     }
 }
 
@@ -41,4 +53,3 @@ impl Plugin for InputPlugin {
         app.add_plugins(input::native::InputPlugin::<Inputs>::default());
     }
 }
-

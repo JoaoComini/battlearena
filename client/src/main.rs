@@ -9,6 +9,7 @@ use shared::{CLIENT_PORT, FIXED_TIMESTEP_HZ, SERVER_ADDR, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
+use abilities::AbilityPlugin;
 use setup::{connect, BattleArenaClient, ClientTransports};
 use systems::BattleArenaClientPlugin;
 
@@ -35,6 +36,7 @@ fn main() {
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaClientPlugin);
+    app.add_plugins(AbilityPlugin);
 
     app.world_mut().spawn(BattleArenaClient {
         client_id,
@@ -58,6 +60,7 @@ fn main() {
 
 fn build_app(tick_duration: Duration, client_id: u64) -> App {
     let mut app = App::new();
+    app.add_plugins(assets::AssetPlugin);
     app.add_plugins(
             bevy::DefaultPlugins
                 .build()

@@ -1,8 +1,10 @@
+use abilities::types::AbilityLoadout;
 use bevy::picking::prelude::{Click, Pointer};
 use bevy::prelude::*;
 use lightyear::connection::client::ClientState;
 use lightyear::prelude::client::*;
 use lightyear::prelude::*;
+use protocol::LocalPlayer;
 
 pub struct BattleArenaClientRendererPlugin {
     pub name: String,
@@ -27,6 +29,9 @@ impl Plugin for BattleArenaClientRendererPlugin {
         app.add_observer(on_update_status_message);
         app.add_observer(handle_connection);
         app.add_observer(handle_disconnection);
+
+        app.add_systems(Startup, spawn_ability_hud);
+        app.add_systems(Update, update_ability_hud);
     }
 }
 
@@ -172,3 +177,85 @@ pub fn handle_disconnection(
         commands.entity(entity).despawn();
     }
 }
+
+// ── Ability HUD ──────────────────────────────────────────────────────────────
+
+#[derive(Component)]
+struct AbilitySlotNode(usize);
+
+#[derive(Component)]
+struct CooldownOverlay(usize);
+
+fn spawn_ability_hud(mut commands: Commands) {
+    commands
+        .spawn(Node {
+            position_type: PositionType::Absolute,
+            bottom: Val::Px(20.0),
+            left: Val::Percent(50.0),
+            flex_direction: FlexDirection::Row,
+            column_gap: Val::Px(8.0),
+            ..default()
+        })
+        .with_children(|parent| {
+            for (i, label) in ["Q", "E"].iter().enumerate() {
+                parent
+                    .spawn((
+                        AbilitySlotNode(i),
+                        Node {
+                            width: Val::Px(54.0),
+                            height: Val::Px(54.0),
+                            border: UiRect::all(Val::Px(2.0)),
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
+                            overflow: Overflow::clip(),
+                            ..default()
+                        },
+                        BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
+                        BorderColor::all(Color::srgb(0.6, 0.6, 0.6)),
+                    ))
+                    .with_children(|slot| {
+                        // cooldown overlay (grows from bottom)
+                        slot.spawn((
+                            CooldownOverlay(i),
+                            Node {
+                                position_type: PositionType::Absolute,
+                                bottom: Val::Px(0.0),
+                                left: Val::Px(0.0),
+                                width: Val::Percent(100.0),
+                                height: Val::Percent(0.0),
+                                ..default()
+                            },
+                            BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.55)),
+                        ));
+                        // key label
+                        slot.spawn((
+                            Text(label.to_string()),
+                            TextFont::from_font_size(16.0),
+                            TextColor(Color::srgb(0.9, 0.9, 0.9)),
+                        ));
+                    });
+            }
+        });
+}
+
+fn update_ability_hud(
+    player: Query<&AbilityLoadout, With<LocalPlayer>>,
+    mut overlays: Query<(&CooldownOverlay, &mut Node)>,
+) {
+    let Ok(loadout) = player.single() else { return };
+
+    // find max cooldown per slot from the AbilityDef — we approximate by
+    // tracking the ratio: remaining / total is unknown without the registry
+    // here, so we just show remaining seconds as a 0-5s bar (clamped).
+    const MAX_CD: f32 = 5.0;
+
+    for (overlay, mut node) in &mut overlays {
+        let pct = loadout
+            .slots
+            .get(overlay.0)
+            .map(|s| (s.cooldown_remaining / MAX_CD).clamp(0.0, 1.0) * 100.0)
+            .unwrap_or(0.0);
+        node.height = Val::Percent(pct);
+    }
+}
+

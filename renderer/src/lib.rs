@@ -14,9 +14,11 @@ pub struct BattleArenaRendererPlugin;
 
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
+        app.add_plugins(physics::PhysicsDebugRenderPlugin);
         app.add_systems(Startup, (init, add_scene_meshes).chain());
         app.add_observer(on_player_spawn);
-        app.add_systems(Update, draw_player_foward);
+        app.add_observer(on_dummy_spawn);
+        app.add_systems(Update, (draw_player_foward, draw_dummy_healthbar));
         app.add_systems(PostUpdate, follow_local_player);
     }
 }
@@ -117,6 +119,61 @@ fn on_player_spawn(
         .id();
 
     commands.entity(entity).add_child(visual);
+}
+
+fn on_dummy_spawn(
+    trigger: On<Add, Dummy>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let entity = trigger.entity;
+    let capsule_height = PLAYER_SIZE;
+    let capsule_radius = PLAYER_SIZE * 0.35;
+    let half_height = capsule_height * 0.5 + capsule_radius;
+
+    let visual = commands
+        .spawn((
+            Mesh3d(meshes.add(Capsule3d::new(capsule_radius, capsule_height))),
+            MeshMaterial3d(materials.add(StandardMaterial {
+                base_color: Color::srgb(0.1, 0.3, 1.0),
+                ..default()
+            })),
+            Transform::from_xyz(0.0, half_height, 0.0),
+        ))
+        .id();
+
+    commands.entity(entity).add_child(visual);
+}
+
+fn draw_dummy_healthbar(
+    dummies: Query<(&Position, &Health), With<Dummy>>,
+    mut gizmos: Gizmos,
+) {
+    const BAR_WIDTH: f32 = 60.0;
+    const BAR_HEIGHT: f32 = 10.0;
+    const BAR_Y: f32 = 90.0;
+
+    for (position, health) in &dummies {
+        let center = Vec3::new(position.x, BAR_Y, -position.y);
+        let pct = (health.current / health.max).clamp(0.0, 1.0);
+
+        // background (dark red)
+        gizmos.rect(
+            Isometry3d::new(center, Quat::IDENTITY),
+            Vec2::new(BAR_WIDTH, BAR_HEIGHT),
+            Color::srgb(0.4, 0.0, 0.0),
+        );
+
+        // foreground (green), anchored left
+        let filled_width = BAR_WIDTH * pct;
+        let offset_x = (BAR_WIDTH - filled_width) * 0.5;
+        gizmos.rect(
+            Isometry3d::new(center - Vec3::X * offset_x, Quat::IDENTITY),
+            Vec2::new(filled_width, BAR_HEIGHT),
+            Color::srgb(0.0, 0.8, 0.1),
+        );
+    }
 }
 
 fn follow_local_player(

@@ -25,6 +25,9 @@ impl PlayerBundle {
 
 // Components
 
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
+pub struct Dummy;
+
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct LocalPlayer;
 
@@ -33,6 +36,19 @@ pub struct PlayerId(pub PeerId);
 
 #[derive(Component, Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct PlayerColor(pub Color);
+
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Health {
+    pub current: f32,
+    pub max: f32,
+}
+
+fn lerp_health(start: Health, end: Health, t: f32) -> Health {
+    Health {
+        current: start.current + (end.current - start.current) * t,
+        max: end.max,
+    }
+}
 
 // Channels
 pub struct Channel1;
@@ -54,6 +70,13 @@ impl Plugin for ProtocolPlugin {
         app.register_component::<Rotation>()
             .add_prediction()
             .add_should_rollback(|a: &Rotation, b: &Rotation| false);
+
+        app.register_component::<Health>()
+            .add_prediction()
+            .add_should_rollback(|a: &Health, b: &Health| (a.current - b.current).abs() >= 0.001)
+            .add_interpolation_with(lerp_health);
+
+        app.register_component::<Dummy>();
 
         // channels
         app.add_channel::<Channel1>(ChannelSettings {
