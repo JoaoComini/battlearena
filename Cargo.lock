@@ -3204,6 +3204,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "editor"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "bevy_egui",
+ "scene",
+ "serde",
+]
+
+[[package]]
 name = "egui"
 version = "0.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
