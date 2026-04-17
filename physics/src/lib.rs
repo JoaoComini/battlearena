@@ -131,7 +131,8 @@ pub fn apply_move_and_slide(
 pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
     const MOVE_SPEED: f32 = 200.0;
     for (mut velocity, input) in &mut query {
-        let Inputs::Direction(direction) = &input.0;
+        let Inputs::PlayerInput(player_input) = &input.0;
+        let direction = &player_input.movement;
         let mut dir = Vec2::ZERO;
         if direction.up {
             dir.y += 1.0;
@@ -151,7 +152,55 @@ pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inpu
 
 pub fn set_rotation(mut query: Query<(&mut Rotation, &ActionState<Inputs>)>) {
     for (mut rotation, input) in &mut query {
-        let Inputs::Direction(direction) = &input.0;
-        *rotation = Rotation::radians(direction.angle);
+        let Inputs::PlayerInput(player_input) = &input.0;
+        *rotation = Rotation::radians(player_input.movement.angle);
+    }
+}
+
+// ── Physics debug rendering (3D-aware) ───────────────────────────────────────
+
+pub struct PhysicsDebugRenderPlugin;
+
+impl Plugin for PhysicsDebugRenderPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, configure_gizmos);
+        app.add_systems(Update, debug_render_colliders);
+    }
+}
+
+fn configure_gizmos(mut config_store: ResMut<GizmoConfigStore>) {
+    let (config, _) = config_store.config_mut::<DefaultGizmoConfigGroup>();
+    config.depth_bias = -1.0;
+}
+
+fn debug_render_colliders(
+    query: Query<(&Position, &Collider)>,
+    mut gizmos: Gizmos,
+) {
+    let color = Color::srgb(0.0, 1.0, 0.0);
+    for (position, collider) in &query {
+        let center = Vec3::new(position.x, 0.0, -position.y);
+        let iso3 = Isometry3d::new(center, Quat::from_rotation_x(std::f32::consts::FRAC_PI_2));
+        if let Some(ball) = collider.shape().as_ball() {
+            gizmos.circle(iso3, ball.radius as f32, color);
+        } else if let Some(cuboid) = collider.shape().as_cuboid() {
+            gizmos.rect(
+                iso3,
+                Vec2::new(
+                    cuboid.half_extents.x as f32 * 2.0,
+                    cuboid.half_extents.y as f32 * 2.0,
+                ),
+                color,
+            );
+        } else if let Some(hull) = collider.shape().as_convex_polygon() {
+            let pts = hull.points();
+            for i in 0..pts.len() {
+                let a = Vec2::new(pts[i].x as f32, pts[i].y as f32);
+                let b = Vec2::new(pts[(i + 1) % pts.len()].x as f32, pts[(i + 1) % pts.len()].y as f32);
+                let wa = Vec3::new(position.x + a.x, 0.0, -(position.y + a.y));
+                let wb = Vec3::new(position.x + b.x, 0.0, -(position.y + b.y));
+                gizmos.line(wa, wb, color);
+            }
+        }
     }
 }

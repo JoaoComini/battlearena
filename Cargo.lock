@@ -19,6 +19,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 
 [[package]]
+name = "abilities"
+version = "0.1.0"
+dependencies = [
+ "avian2d 0.6.1",
+ "bevy",
+ "inputs",
+ "lightyear",
+ "protocol",
+ "ron",
+ "serde",
+ "shared",
+]
+
+[[package]]
 name = "accesskit"
 version = "0.21.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -454,6 +468,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "assets"
+version = "0.1.0"
+dependencies = [
+ "bevy",
 ]
 
 [[package]]
@@ -2555,6 +2576,8 @@ checksum = "c8d4a3bb8b1e0c1050499d1815f5ab16d04f0959b233085fb31653fbfc9d98f9"
 name = "client"
 version = "0.1.0"
 dependencies = [
+ "abilities",
+ "assets",
  "avian2d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
@@ -6837,10 +6860,12 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 name = "renderer"
 version = "0.1.0"
 dependencies = [
+ "abilities",
  "avian2d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
  "lightyear",
+ "physics",
  "protocol",
  "shared",
 ]
@@ -7050,17 +7075,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scene"
-version = "0.1.0"
-dependencies = [
- "avian2d 0.6.1",
- "bevy",
- "ron",
- "serde",
- "tempfile",
-]
-
-[[package]]
 name = "schannel"
 version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7207,6 +7221,8 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
+ "abilities",
+ "assets",
  "async-compat",
  "avian2d 0.6.1",
  "bevy",
@@ -7596,19 +7612,6 @@ dependencies = [
  "grid",
  "serde",
  "slotmap",
-]
-
-[[package]]
-name = "tempfile"
-version = "3.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
-dependencies = [
- "fastrand",
- "getrandom 0.4.2",
- "once_cell",
- "rustix 1.1.4",
- "windows-sys 0.61.2",
 ]
 
 [[package]]

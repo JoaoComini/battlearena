@@ -1,0 +1,5 @@
+(
+    key: "melee",
+    cooldown_secs: 0.8,
+    effect: MeleeHit(range: 200.0, angle_deg: 120.0, damage: 30.0, lifetime_frames: 30),
+)

@@ -1,12 +1,12 @@
-use avian2d::prelude::Position;
+use inputs::{AbilityInput, Direction, Inputs, PlayerInput};
+use physics::PlayerPhysicsBundle;
+use protocol::*;
+use avian2d::prelude::{Collider, Position, RigidBody};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
-use inputs::{Direction, Inputs};
 use lightyear::prelude::client::input::*;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::*;
-use physics::PlayerPhysicsBundle;
-use protocol::*;
 
 pub struct BattleArenaClientPlugin;
 
@@ -18,12 +18,14 @@ impl Plugin for BattleArenaClientPlugin {
         );
         app.add_observer(handle_predicted_spawn);
         app.add_observer(handle_interpolated_spawn);
+        app.add_observer(handle_dummy_spawn);
     }
 }
 
 pub(crate) fn buffer_input(
     mut query: Query<(&mut ActionState<Inputs>, &Position), With<InputMarker<Inputs>>>,
     keypress: Res<ButtonInput<KeyCode>>,
+    mouse_button_input: Res<ButtonInput<MouseButton>>,
     windows: Query<&Window, With<PrimaryWindow>>,
     camera_q: Query<(&Camera, &GlobalTransform)>,
 ) {
@@ -52,17 +54,24 @@ pub(crate) fn buffer_input(
             if let Some(cursor_pos) = window.cursor_position() {
                 // Unproject onto the Z=0 plane (the arena floor)
                 if let Ok(ray) = camera.viewport_to_world(camera_transform, cursor_pos) {
-                    let t = -ray.origin.z / ray.direction.z;
-                    if t > 0.0 {
-                        let world_pos = (ray.origin + ray.direction * t).xy();
-                        let player_pos = position.0;
-                        direction.angle =
-                            (world_pos - player_pos).to_angle() - std::f32::consts::FRAC_PI_2;
+                    if ray.direction.y.abs() > f32::EPSILON {
+                        let t = -ray.origin.y / ray.direction.y;
+                        if t > 0.0 {
+                            let hit = ray.origin + ray.direction * t;
+                            let world_pos = Vec2::new(hit.x, -hit.z);
+                            let player_pos = position.0;
+                            direction.angle =
+                                (world_pos - player_pos).to_angle() - std::f32::consts::FRAC_PI_2;
+                        }
                     }
                 }
             }
         }
-        action_state.0 = Inputs::Direction(direction);
+        let abilities = AbilityInput {
+            slot1: mouse_button_input.pressed(MouseButton::Left),
+            slot2: keypress.pressed(KeyCode::KeyE),
+        };
+        action_state.0 = Inputs::PlayerInput(PlayerInput { movement: direction, abilities });
     }
 }
 
@@ -104,4 +113,21 @@ pub(crate) fn handle_interpolated_spawn(
     commands
         .entity(entity)
         .insert(PlayerPhysicsBundle::default());
+}
+
+pub(crate) fn handle_dummy_spawn(
+    trigger: On<Add, Dummy>,
+    query: Query<Option<&Collider>, With<Dummy>>,
+    mut commands: Commands,
+) {
+    let entity = trigger.entity;
+    // Insert RigidBody::Static so Avian registers the replicated Collider
+    // for collision detection (move_and_slide respects static bodies).
+    let collider = query
+        .get(entity)
+        .ok()
+        .flatten()
+        .cloned()
+        .unwrap_or_else(|| Collider::circle(25.0));
+    commands.entity(entity).insert((RigidBody::Static, collider));
 }
