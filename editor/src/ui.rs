@@ -2,25 +2,90 @@ use avian2d::prelude::{ColliderConstructor, RigidBody};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use import::MeshPath;
+use import::{ImportScene, MeshPath};
 use scene::save;
 
 use crate::selection::SelectedEntity;
-use crate::spawn::{asset_fs_path, ActiveSceneRoot};
+use crate::spawn::{asset_fs_path, ActiveSceneRoot, ScenePath};
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(EguiPrimaryContextPass, inspector_panel);
+        app.init_resource::<OpenSceneDialog>();
+        app.add_systems(EguiPrimaryContextPass, (toolbar, inspector_panel).chain());
     }
+}
+
+#[derive(Resource, Default)]
+struct OpenSceneDialog {
+    open: bool,
+    path_input: String,
+}
+
+fn toolbar(
+    mut contexts: EguiContexts,
+    mut dialog: ResMut<OpenSceneDialog>,
+    mut commands: Commands,
+    scene_root: Query<Entity, With<ActiveSceneRoot>>,
+) -> Result {
+    egui::TopBottomPanel::top("toolbar").show(contexts.ctx_mut()?, |ui| {
+        egui::MenuBar::new().ui(ui, |ui| {
+            ui.menu_button("File", |ui| {
+                if ui.button("Open Scene").clicked() {
+                    dialog.open = true;
+                    ui.close();
+                }
+            });
+        });
+    });
+
+    if dialog.open {
+        egui::Window::new("Open Scene")
+            .collapsible(false)
+            .resizable(false)
+            .show(contexts.ctx_mut()?, |ui| {
+                ui.label("Scene path:");
+                let response = ui.text_edit_singleline(&mut dialog.path_input);
+                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                    dialog.open = false;
+                    dialog.path_input.clear();
+                }
+                ui.horizontal(|ui| {
+                    let can_open = !dialog.path_input.is_empty();
+                    if ui
+                        .add_enabled(can_open, egui::Button::new("Open"))
+                        .clicked()
+                        || (response.lost_focus()
+                            && ui.input(|i| i.key_pressed(egui::Key::Enter))
+                            && can_open)
+                    {
+                        let path = dialog.path_input.trim().to_string();
+                        if let Ok(entity) = scene_root.single() {
+                            commands
+                                .entity(entity)
+                                .despawn_related::<Children>()
+                                .insert((ImportScene(path.clone()), ScenePath(path)));
+                        }
+                        dialog.open = false;
+                        dialog.path_input.clear();
+                    }
+                    if ui.button("Cancel").clicked() {
+                        dialog.open = false;
+                        dialog.path_input.clear();
+                    }
+                });
+            });
+    }
+
+    Ok(())
 }
 
 fn inspector_panel(
     mut contexts: EguiContexts,
     selected: Res<SelectedEntity>,
     node_query: Query<(Option<&MeshPath>, Option<&Name>)>,
-    mesh_query: Query<(&Mesh3d, Option<&MeshMaterial3d<StandardMaterial>>)>,
+    mesh_query: Query<&Mesh3d>,
     mut collider_query: Query<Option<&mut ColliderConstructor>>,
     rigid_body_query: Query<Option<&RigidBody>>,
     mut commands: Commands,
@@ -51,18 +116,15 @@ fn inspector_panel(
             }
             ui.separator();
 
-            // Mesh info (only shown when a primitive entity is selected).
-            if let Ok((mesh, material)) = mesh_query.get(entity) {
+            if let Ok(mesh) = mesh_query.get(entity) {
                 egui::CollapsingHeader::new("Mesh")
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.label(format!("Mesh:     {:?}", mesh.id()));
-                        ui.label(format!("Material: {}", if material.is_some() { "present" } else { "none" }));
                     });
                 ui.separator();
             }
 
-            // ColliderConstructor component editor.
             if let Ok(Some(mut collider)) = collider_query.get_mut(entity) {
                 let mut remove = false;
 
@@ -82,7 +144,6 @@ fn inspector_panel(
                 ui.separator();
             }
 
-            // RigidBody component editor.
             if let Ok(Some(rigid_body)) = rigid_body_query.get(entity) {
                 let mut current = *rigid_body;
                 let mut remove = false;
@@ -175,7 +236,11 @@ fn collider_editor(ui: &mut egui::Ui, collider: &mut ColliderConstructor) {
         ColliderConstructor::Circle { radius } => {
             ui.horizontal(|ui| {
                 ui.label("Radius");
-                ui.add(egui::DragValue::new(radius).speed(0.1).range(0.01..=f32::MAX));
+                ui.add(
+                    egui::DragValue::new(radius)
+                        .speed(0.1)
+                        .range(0.01..=f32::MAX),
+                );
             });
         }
         ColliderConstructor::Rectangle { x_length, y_length } => {
@@ -224,22 +289,14 @@ fn save_scene_system(world: &mut World) {
         return;
     };
 
-    let import_path = world
-        .get::<import::ImportScene>(root)
-        .map(|i| i.0.clone());
+    let loaded_path = world.get::<ScenePath>(root).map(|s| s.0.clone());
 
-    let scene_path = match import_path {
-        Some(ref p) if p.ends_with(".scn.ron") => asset_fs_path(p),
-        Some(ref p) => {
-            let ron_path = p
-                .trim_end_matches(".glb")
-                .trim_end_matches(".gltf")
-                .to_string()
-                + ".scn.ron";
-            asset_fs_path(&ron_path)
-        }
-        None => asset_fs_path("scene.scn.ron"),
+    let Some(loaded_path) = loaded_path else {
+        error!("No scene loaded, cannot save");
+        return;
     };
+
+    let scene_path = asset_fs_path(&loaded_path).with_extension("scn");
 
     match save(root, world, &scene_path) {
         Ok(()) => info!("Scene saved to {}", scene_path.display()),

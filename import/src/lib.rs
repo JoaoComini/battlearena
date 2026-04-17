@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy::scene::DynamicSceneRoot;
 
 /// Place this component on an entity to import a scene from the given asset
-/// path as children. Supports `.scn.ron` (dynamic scene) and `.glb`/`.gltf`.
+/// path as children. Supports `.scn` (dynamic scene) and `.glb`/`.gltf`.
 #[derive(Component)]
 pub struct ImportScene(pub String);
 
@@ -35,7 +35,7 @@ fn initiate_import(
 ) {
     for (entity, import) in &query {
         let path = &import.0;
-        if path.ends_with(".scn.ron") {
+        if path.ends_with(".scn") {
             let handle: Handle<DynamicScene> = asset_server.load(path.clone());
             commands
                 .entity(entity)
