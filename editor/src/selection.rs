@@ -1,7 +1,6 @@
 use bevy::pbr::wireframe::{Wireframe, WireframeColor, WireframePlugin};
 use bevy::prelude::*;
-
-use crate::spawn::Editable;
+use bevy_egui::input::EguiWantsInput;
 
 /// The currently selected scene entity.
 #[derive(Resource, Default)]
@@ -18,25 +17,22 @@ impl Plugin for SelectionPlugin {
     }
 }
 
-/// Selects the clicked entity if it is `Editable`, otherwise walks up to the
-/// closest `Editable` ancestor.
 fn on_click_select(
-    trigger: On<Pointer<Click>>,
-    editable_query: Query<(), With<Editable>>,
-    parent_query: Query<&ChildOf>,
+    mut trigger: On<Pointer<Click>>,
+    egui_wants_input: Res<EguiWantsInput>,
+    mesh_query: Query<(), With<Mesh3d>>,
     mut selected: ResMut<SelectedEntity>,
 ) {
-    let mut current = trigger.entity;
-    loop {
-        if editable_query.contains(current) {
-            selected.0 = Some(current);
-            return;
-        }
-        match parent_query.get(current) {
-            Ok(child_of) => current = child_of.parent(),
-            Err(_) => break,
-        }
+    if egui_wants_input.wants_any_pointer_input() {
+        return;
     }
+
+    if !mesh_query.contains(trigger.entity) {
+        return;
+    }
+
+    trigger.propagate(false);
+    selected.0 = Some(trigger.entity);
 }
 
 /// Adds/removes wireframe when selection changes.
@@ -55,7 +51,9 @@ fn update_wireframe(
 
     if let Some(prev) = *prev_selected {
         for entity in mesh_entities(prev, &children_query, &mesh_query) {
-            commands.entity(entity).remove::<(Wireframe, WireframeColor)>();
+            commands
+                .entity(entity)
+                .remove::<(Wireframe, WireframeColor)>();
         }
     }
 

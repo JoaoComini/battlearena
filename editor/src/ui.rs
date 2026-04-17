@@ -1,10 +1,12 @@
 use avian2d::prelude::{ColliderConstructor, RigidBody};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-use scene::{save, GltfPrimitiveRef};
+
+use import::MeshPath;
+use scene::save;
 
 use crate::selection::SelectedEntity;
-use crate::spawn::{asset_fs_path, Editable, OpenGltf};
+use crate::spawn::{asset_fs_path, ActiveSceneRoot};
 
 pub struct UiPlugin;
 
@@ -17,7 +19,7 @@ impl Plugin for UiPlugin {
 fn inspector_panel(
     mut contexts: EguiContexts,
     selected: Res<SelectedEntity>,
-    node_query: Query<(Option<&GltfPrimitiveRef>, Option<&Name>)>,
+    node_query: Query<(Option<&MeshPath>, Option<&Name>)>,
     mesh_query: Query<(&Mesh3d, Option<&MeshMaterial3d<StandardMaterial>>)>,
     mut collider_query: Query<Option<&mut ColliderConstructor>>,
     rigid_body_query: Query<Option<&RigidBody>>,
@@ -39,14 +41,12 @@ fn inspector_panel(
             };
 
             // Entity info.
-            if let Ok((prim_ref, name)) = node_query.get(entity) {
+            if let Ok((mesh_path, name)) = node_query.get(entity) {
                 if let Some(n) = name {
-                    ui.label(format!("Name:  {}", n));
+                    ui.label(format!("Name: {}", n));
                 }
-                if let Some(r) = prim_ref {
-                    ui.label(format!("Mesh:      {}", r.mesh_index));
-                    ui.label(format!("Primitive: {}", r.primitive_index));
-                    ui.label(format!("File:      {}", r.path));
+                if let Some(p) = mesh_path {
+                    ui.label(format!("Mesh: {}", p.0));
                 }
             }
             ui.separator();
@@ -215,12 +215,33 @@ fn rigid_body_editor(ui: &mut egui::Ui, rigid_body: &mut RigidBody) {
 }
 
 fn save_scene_system(world: &mut World) {
-    let scene_path = world
-        .get_resource::<OpenGltf>()
-        .map(|o| asset_fs_path(&o.scene_path))
-        .unwrap_or_else(|| asset_fs_path("scene.scn.ron"));
+    let root = world
+        .query_filtered::<Entity, With<ActiveSceneRoot>>()
+        .single(world);
 
-    match save::<With<Editable>>(world, &scene_path) {
+    let Ok(root) = root else {
+        error!("No ActiveSceneRoot found, cannot save");
+        return;
+    };
+
+    let import_path = world
+        .get::<import::ImportScene>(root)
+        .map(|i| i.0.clone());
+
+    let scene_path = match import_path {
+        Some(ref p) if p.ends_with(".scn.ron") => asset_fs_path(p),
+        Some(ref p) => {
+            let ron_path = p
+                .trim_end_matches(".glb")
+                .trim_end_matches(".gltf")
+                .to_string()
+                + ".scn.ron";
+            asset_fs_path(&ron_path)
+        }
+        None => asset_fs_path("scene.scn.ron"),
+    };
+
+    match save(root, world, &scene_path) {
         Ok(()) => info!("Scene saved to {}", scene_path.display()),
         Err(e) => error!("Failed to save scene: {e}"),
     }

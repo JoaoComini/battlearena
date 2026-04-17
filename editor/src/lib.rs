@@ -17,7 +17,6 @@ pub struct EditorPlugin;
 
 impl Plugin for EditorPlugin {
     fn build(&self, app: &mut App) {
-        app.register_type::<spawn::Editable>();
         app.add_plugins((
             FreeCameraPlugin,
             SpawnPlugin,

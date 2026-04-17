@@ -3210,6 +3210,7 @@ dependencies = [
  "avian2d 0.6.1",
  "bevy",
  "bevy_egui",
+ "import",
  "scene",
  "serde",
 ]
@@ -4278,6 +4279,14 @@ dependencies = [
  "num-traits",
  "png",
  "tiff",
+]
+
+[[package]]
+name = "import"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "serde",
 ]
 
 [[package]]
@@ -7091,6 +7100,7 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "import",
  "ron",
  "serde",
  "tempfile",

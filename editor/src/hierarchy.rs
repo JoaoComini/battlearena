@@ -1,8 +1,9 @@
 use bevy::prelude::*;
+use crate::spawn::ActiveSceneRoot;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
+
 use crate::selection::SelectedEntity;
-use crate::spawn::Editable;
 
 pub struct HierarchyPlugin;
 
@@ -14,8 +15,8 @@ impl Plugin for HierarchyPlugin {
 
 fn hierarchy_panel(
     mut contexts: EguiContexts,
-    entities: Query<(Entity, Option<&Name>, Option<&Children>), With<Editable>>,
-    parents: Query<&ChildOf>,
+    root_query: Query<(Entity, &Children), With<ActiveSceneRoot>>,
+    entities: Query<(Entity, Option<&Name>, Option<&Children>)>,
     mut selected: ResMut<SelectedEntity>,
     mut commands: Commands,
 ) -> Result {
@@ -25,21 +26,20 @@ fn hierarchy_panel(
             ui.heading("Hierarchy");
             ui.separator();
 
-            let mut roots: Vec<Entity> = entities
-                .iter()
-                .filter(|(e, _, _)| !parents.contains(*e))
-                .map(|(e, _, _)| e)
-                .collect();
+            let Ok((root, root_children)) = root_query.single() else {
+                return;
+            };
+
+            let mut roots: Vec<Entity> = root_children.iter().collect::<Vec<_>>();
             roots.sort_by_key(|e| e.index());
 
             let mut spawn_child_of: Option<Entity> = None;
             let mut spawn_root = false;
 
-            for root in roots {
-                entity_tree(root, &entities, ui, &mut selected, &mut spawn_child_of);
+            for entity in roots {
+                entity_tree(entity, &entities, ui, &mut selected, &mut spawn_child_of);
             }
 
-            // Right-click on empty space below the list → add root entity.
             let remaining = ui.allocate_response(ui.available_size(), egui::Sense::click());
             remaining.context_menu(|ui| {
                 if ui.button("Add Entity").clicked() {
@@ -50,15 +50,16 @@ fn hierarchy_panel(
 
             if let Some(parent) = spawn_child_of {
                 let child = commands
-                    .spawn((Name::new("Entity"), Editable, Transform::default()))
+                    .spawn((Name::new("Entity"), Transform::default()))
                     .id();
                 commands.entity(parent).add_child(child);
                 selected.0 = Some(child);
             } else if spawn_root {
-                let e = commands
-                    .spawn((Name::new("Entity"), Editable, Transform::default()))
+                let child = commands
+                    .spawn((Name::new("Entity"), Transform::default()))
                     .id();
-                selected.0 = Some(e);
+                commands.entity(root).add_child(child);
+                selected.0 = Some(child);
             }
         });
     Ok(())
@@ -66,7 +67,7 @@ fn hierarchy_panel(
 
 fn entity_tree(
     entity: Entity,
-    entities: &Query<(Entity, Option<&Name>, Option<&Children>), With<Editable>>,
+    entities: &Query<(Entity, Option<&Name>, Option<&Children>)>,
     ui: &mut egui::Ui,
     selected: &mut ResMut<SelectedEntity>,
     spawn_child_of: &mut Option<Entity>,
@@ -81,11 +82,11 @@ fn entity_tree(
 
     let is_selected = selected.0 == Some(entity);
 
-    let editable_children: Vec<Entity> = children
-        .map(|c| c.iter().filter(|e| entities.contains(*e)).collect())
+    let child_list: Vec<Entity> = children
+        .map(|c| c.iter().collect())
         .unwrap_or_default();
 
-    if !editable_children.is_empty() {
+    if !child_list.is_empty() {
         let id = ui.make_persistent_id(entity);
         egui::collapsing_header::CollapsingState::load_with_default_open(ui.ctx(), id, true)
             .show_header(ui, |ui: &mut egui::Ui| {
@@ -96,7 +97,7 @@ fn entity_tree(
                 context_menu(&response, entity, spawn_child_of);
             })
             .body(|ui| {
-                for child in &editable_children {
+                for child in &child_list {
                     entity_tree(*child, entities, ui, selected, spawn_child_of);
                 }
             });

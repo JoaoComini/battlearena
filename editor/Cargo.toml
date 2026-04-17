@@ -9,3 +9,4 @@ serde = { workspace = true }
 avian2d = { workspace = true }
 bevy_egui = { workspace = true }
 scene = { workspace = true }
+import = { workspace = true }
