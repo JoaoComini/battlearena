@@ -12,3 +12,7 @@ pub struct MeshPath(pub String);
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug)]
 #[reflect(Component, Serialize, Deserialize)]
 pub struct MaterialPath(pub String);
+
+/// Place this component on an entity to load a `.scn` dynamic scene as children.
+#[derive(Component)]
+pub struct LoadScene(pub String);

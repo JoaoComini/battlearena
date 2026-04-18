@@ -1,7 +1,7 @@
 use bevy::gltf::{Gltf, GltfAssetLabel, GltfMesh, GltfNode};
 use bevy::prelude::*;
 
-use crate::{MaterialPath, MeshPath};
+use scene::{MaterialPath, MeshPath};
 
 pub(crate) fn spawn_nodes(
     gltf: &Gltf,

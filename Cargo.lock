@@ -4286,6 +4286,7 @@ name = "import"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "scene",
  "serde",
 ]
 
@@ -7100,7 +7101,6 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
- "import",
  "ron",
  "serde",
  "tempfile",

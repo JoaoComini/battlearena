@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use editor::EditorPlugin;
 use import::ImportPlugin;
+use scene::ScenePlugin;
 
 fn main() {
     App::new()
@@ -17,6 +18,7 @@ fn main() {
         )
         .add_plugins(MeshPickingPlugin)
         .add_plugins(EguiPlugin::default())
+        .add_plugins(ScenePlugin)
         .add_plugins(ImportPlugin)
         .add_plugins(EditorPlugin)
         .run();

@@ -2,12 +2,12 @@ use avian2d::prelude::{ColliderConstructor, RigidBody};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use import::{ImportScene, MeshPath};
+use scene::MeshPath;
 use scene::save;
 
 use crate::hierarchy::hierarchy_panel;
 use crate::selection::SelectedEntity;
-use crate::spawn::{asset_fs_path, ActiveSceneRoot, ScenePath};
+use crate::spawn::{asset_fs_path, ActiveSceneRoot, OpenScene, ScenePath};
 
 pub struct UiPlugin;
 
@@ -69,7 +69,7 @@ fn toolbar(
                             commands
                                 .entity(entity)
                                 .despawn_related::<Children>()
-                                .insert((ImportScene(path.clone()), ScenePath(path)));
+                                .insert(OpenScene(path));
                         }
                         dialog.open = false;
                         dialog.path_input.clear();

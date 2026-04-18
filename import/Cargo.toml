@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 bevy = { workspace = true }
 serde = { workspace = true }
+scene = { workspace = true }

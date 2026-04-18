@@ -1,5 +1,7 @@
 use avian2d::prelude::{Position, Rotation};
 use bevy::prelude::*;
+use import::ImportGltf;
+use scene::LoadScene;
 
 /// Marks the root entity of the active scene in the editor.
 #[derive(Component)]
@@ -9,12 +11,31 @@ pub struct ActiveSceneRoot;
 #[derive(Component)]
 pub struct ScenePath(pub String);
 
+/// Place this component on an entity to open a scene file.
+/// Dispatches to `LoadScene` for `.scn` files or `ImportGltf` for GLTF.
+#[derive(Component)]
+pub struct OpenScene(pub String);
+
 pub struct SpawnPlugin;
 
 impl Plugin for SpawnPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(PostUpdate, transform_to_position);
         app.add_systems(Startup, setup);
+        app.add_systems(Update, open_scene);
+    }
+}
+
+fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
+    for (entity, open) in &query {
+        let path = open.0.clone();
+        let mut entity_cmds = commands.entity(entity);
+        entity_cmds.insert(ScenePath(path.clone())).remove::<OpenScene>();
+        if path.ends_with(".scn") {
+            entity_cmds.insert(LoadScene(path));
+        } else {
+            entity_cmds.insert(ImportGltf(path));
+        }
     }
 }
 
