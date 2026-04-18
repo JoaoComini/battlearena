@@ -1,19 +1,10 @@
 use bevy::prelude::*;
 use crate::spawn::ActiveSceneRoot;
-use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
-
+use bevy_egui::{egui, EguiContexts};
 
 use crate::selection::SelectedEntity;
 
-pub struct HierarchyPlugin;
-
-impl Plugin for HierarchyPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_systems(EguiPrimaryContextPass, hierarchy_panel);
-    }
-}
-
-fn hierarchy_panel(
+pub(crate) fn hierarchy_panel(
     mut contexts: EguiContexts,
     root_query: Query<(Entity, &Children), With<ActiveSceneRoot>>,
     entities: Query<(Entity, Option<&Name>, Option<&Children>)>,

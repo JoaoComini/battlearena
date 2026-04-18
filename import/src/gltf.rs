@@ -43,9 +43,7 @@ pub(crate) fn spawn_nodes(
                     (mesh_path, material_path)
                 })
                 .collect();
-            let mut transform = node.transform;
-            transform.scale *= 100.0;
-            Some((node.name.clone(), transform, primitives))
+            Some((node.name.clone(), node.transform, primitives))
         })
         .collect();
 

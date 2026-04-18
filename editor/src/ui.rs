@@ -5,6 +5,7 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use import::{ImportScene, MeshPath};
 use scene::save;
 
+use crate::hierarchy::hierarchy_panel;
 use crate::selection::SelectedEntity;
 use crate::spawn::{asset_fs_path, ActiveSceneRoot, ScenePath};
 
@@ -13,7 +14,10 @@ pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<OpenSceneDialog>();
-        app.add_systems(EguiPrimaryContextPass, (toolbar, inspector_panel).chain());
+        app.add_systems(
+            EguiPrimaryContextPass,
+            (toolbar, hierarchy_panel, inspector_panel).chain(),
+        );
     }
 }
 
@@ -86,6 +90,7 @@ fn inspector_panel(
     selected: Res<SelectedEntity>,
     node_query: Query<(Option<&MeshPath>, Option<&Name>)>,
     mesh_query: Query<&Mesh3d>,
+    mut transform_query: Query<&mut Transform>,
     mut collider_query: Query<Option<&mut ColliderConstructor>>,
     rigid_body_query: Query<Option<&RigidBody>>,
     mut commands: Commands,
@@ -115,6 +120,42 @@ fn inspector_panel(
                 }
             }
             ui.separator();
+
+            if let Ok(mut transform) = transform_query.get_mut(entity) {
+                egui::CollapsingHeader::new("Transform")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        let mut translation = transform.translation;
+                        let (yaw, pitch, roll) = transform.rotation.to_euler(EulerRot::YXZ);
+                        let mut euler = Vec3::new(yaw.to_degrees(), pitch.to_degrees(), roll.to_degrees());
+                        let mut scale = transform.scale;
+
+                        egui::Grid::new("transform_grid").show(ui, |ui| {
+                            ui.label("Position");
+                            ui.add(egui::DragValue::new(&mut translation.x).prefix("X: ").speed(0.1));
+                            ui.add(egui::DragValue::new(&mut translation.y).prefix("Y: ").speed(0.1));
+                            ui.add(egui::DragValue::new(&mut translation.z).prefix("Z: ").speed(0.1));
+                            ui.end_row();
+
+                            ui.label("Rotation");
+                            ui.add(egui::DragValue::new(&mut euler.x).prefix("Y: ").speed(1.0).suffix("°"));
+                            ui.add(egui::DragValue::new(&mut euler.y).prefix("X: ").speed(1.0).suffix("°"));
+                            ui.add(egui::DragValue::new(&mut euler.z).prefix("Z: ").speed(1.0).suffix("°"));
+                            ui.end_row();
+
+                            ui.label("Scale");
+                            ui.add(egui::DragValue::new(&mut scale.x).prefix("X: ").speed(0.01));
+                            ui.add(egui::DragValue::new(&mut scale.y).prefix("Y: ").speed(0.01));
+                            ui.add(egui::DragValue::new(&mut scale.z).prefix("Z: ").speed(0.01));
+                            ui.end_row();
+                        });
+
+                        transform.translation = translation;
+                        transform.rotation = Quat::from_euler(EulerRot::YXZ, euler.x.to_radians(), euler.y.to_radians(), euler.z.to_radians());
+                        transform.scale = scale;
+                    });
+                ui.separator();
+            }
 
             if let Ok(mesh) = mesh_query.get(entity) {
                 egui::CollapsingHeader::new("Mesh")
@@ -239,7 +280,7 @@ fn collider_editor(ui: &mut egui::Ui, collider: &mut ColliderConstructor) {
                 ui.add(
                     egui::DragValue::new(radius)
                         .speed(0.1)
-                        .range(0.01..=f32::MAX),
+                        ,
                 );
             });
         }
@@ -249,7 +290,7 @@ fn collider_editor(ui: &mut egui::Ui, collider: &mut ColliderConstructor) {
                 ui.add(
                     egui::DragValue::new(x_length)
                         .speed(0.1)
-                        .range(0.01..=f32::MAX),
+                        ,
                 );
             });
             ui.horizontal(|ui| {
@@ -257,7 +298,7 @@ fn collider_editor(ui: &mut egui::Ui, collider: &mut ColliderConstructor) {
                 ui.add(
                     egui::DragValue::new(y_length)
                         .speed(0.1)
-                        .range(0.01..=f32::MAX),
+                        ,
                 );
             });
         }

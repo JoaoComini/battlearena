@@ -17,7 +17,6 @@ fn configure_gizmos(mut config_store: ResMut<GizmoConfigStore>) {
     config.depth_bias = -1.0;
 }
 
-/// Draws colliders as gizmos in the X/Z plane (Y = entity's world Y position).
 fn draw_colliders(
     root_query: Query<Entity, With<ActiveSceneRoot>>,
     children_query: Query<&Children>,
@@ -34,23 +33,18 @@ fn draw_colliders(
         };
 
         let translation = transform.translation();
-        let y = translation.y;
-        let center = Vec3::new(translation.x, y, translation.z);
+        let (yaw, _, _) = transform.to_scale_rotation_translation().1.to_euler(EulerRot::YXZ);
+        let iso = Isometry3d::new(
+            translation,
+            Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) * Quat::from_rotation_z(-yaw),
+        );
 
         match collider {
             ColliderConstructor::Circle { radius } => {
-                gizmos.circle(
-                    Isometry3d::new(center, Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
-                    *radius,
-                    Color::srgb(0.0, 1.0, 0.0),
-                );
+                gizmos.circle(iso, *radius, Color::srgb(0.0, 1.0, 0.0));
             }
             ColliderConstructor::Rectangle { x_length, y_length } => {
-                gizmos.rect(
-                    Isometry3d::new(center, Quat::from_rotation_x(std::f32::consts::FRAC_PI_2)),
-                    Vec2::new(*x_length, *y_length),
-                    Color::srgb(0.0, 1.0, 0.0),
-                );
+                gizmos.rect(iso, Vec2::new(*x_length, *y_length), Color::srgb(0.0, 1.0, 0.0));
             }
             _ => {}
         }

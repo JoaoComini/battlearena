@@ -81,11 +81,42 @@ impl Plugin for PhysicsPlugin {
 }
 
 pub fn position_to_transform(
-    mut query: Query<(&Position, &Rotation, &mut Transform), With<ApplyPosToTransform>>,
+    mut query: Query<
+        (&Position, &Rotation, &mut Transform, Option<&ChildOf>),
+        With<ApplyPosToTransform>,
+    >,
+    parents: Query<(&GlobalTransform, Option<&Position>, Option<&Rotation>)>,
 ) {
-    for (pos, rot, mut transform) in &mut query {
-        transform.translation = Vec3::new(pos.x, 0.0, -pos.y);
-        transform.rotation = Quat::from_rotation_y(rot.as_radians());
+    for (pos, rot, mut transform, child_of) in &mut query {
+        let world_rotation = Quat::from_rotation_y(rot.as_radians());
+
+        if let Some(&ChildOf(parent)) = child_of {
+            if let Ok((parent_global, parent_pos, parent_rot)) = parents.get(parent) {
+                let parent_transform = parent_global.compute_transform();
+                let parent_translation = parent_pos.map_or(parent_transform.translation, |p| {
+                    Vec3::new(p.x, parent_transform.translation.y, -p.y)
+                });
+                let parent_rotation = parent_rot.map_or(parent_transform.rotation, |r| {
+                    Quat::from_rotation_y(r.as_radians())
+                });
+                let parent_scale = parent_transform.scale;
+                let effective_parent = Transform::from_translation(parent_translation)
+                    .with_rotation(parent_rotation)
+                    .with_scale(parent_scale);
+
+                let new_transform = GlobalTransform::from(
+                    Transform::from_translation(Vec3::new(pos.x, transform.translation.y, -pos.y))
+                        .with_rotation(world_rotation),
+                )
+                .reparented_to(&GlobalTransform::from(effective_parent));
+
+                transform.translation = new_transform.translation;
+                transform.rotation = new_transform.rotation;
+            }
+        } else {
+            transform.translation = Vec3::new(pos.x, transform.translation.y, -pos.y);
+            transform.rotation = world_rotation;
+        }
     }
 }
 

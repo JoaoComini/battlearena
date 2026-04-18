@@ -1,3 +1,4 @@
+use avian2d::prelude::{Position, Rotation};
 use bevy::prelude::*;
 
 /// Marks the root entity of the active scene in the editor.
@@ -12,7 +13,22 @@ pub struct SpawnPlugin;
 
 impl Plugin for SpawnPlugin {
     fn build(&self, app: &mut App) {
+        app.add_systems(PostUpdate, transform_to_position);
         app.add_systems(Startup, setup);
+    }
+}
+
+fn transform_to_position(
+    mut query: Query<(&GlobalTransform, &mut Position, Option<&mut Rotation>), Changed<GlobalTransform>>,
+) {
+    for (transform, mut position, rotation) in &mut query {
+        let translation = transform.translation();
+        position.x = translation.x;
+        position.y = -translation.z;
+        if let Some(mut rot) = rotation {
+            let (yaw, _, _) = transform.to_scale_rotation_translation().1.to_euler(EulerRot::YXZ);
+            *rot = Rotation::radians(yaw);
+        }
     }
 }
 

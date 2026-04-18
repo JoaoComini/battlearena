@@ -1,4 +1,4 @@
-use avian2d::prelude::{ColliderConstructor, RigidBody};
+use avian2d::prelude::{ColliderConstructor, Position, RigidBody, Rotation};
 use bevy::prelude::*;
 use bevy::scene::serde::SceneSerializer;
 
@@ -29,6 +29,8 @@ pub fn save(root: Entity, world: &World, path: impl AsRef<Path>) -> Result<(), S
         .allow_component::<MaterialPath>()
         .allow_component::<ColliderConstructor>()
         .allow_component::<RigidBody>()
+        .allow_component::<Position>()
+        .allow_component::<Rotation>()
         .extract_entities(descendants.into_iter())
         .build();
 

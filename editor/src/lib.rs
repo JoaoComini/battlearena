@@ -8,7 +8,6 @@ mod ui;
 use bevy::prelude::*;
 use collider_gizmos::ColliderGizmosPlugin;
 use free_camera::FreeCameraPlugin;
-use hierarchy::HierarchyPlugin;
 use selection::SelectionPlugin;
 use spawn::SpawnPlugin;
 use ui::UiPlugin;
@@ -23,7 +22,6 @@ impl Plugin for EditorPlugin {
             SelectionPlugin,
             UiPlugin,
             ColliderGizmosPlugin,
-            HierarchyPlugin,
         ));
     }
 }
