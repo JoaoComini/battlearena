@@ -3,6 +3,7 @@ mod free_camera;
 mod hierarchy;
 mod selection;
 mod spawn;
+mod transform_gizmo;
 mod ui;
 
 use bevy::prelude::*;
@@ -10,6 +11,7 @@ use collider_gizmos::ColliderGizmosPlugin;
 use free_camera::FreeCameraPlugin;
 use selection::SelectionPlugin;
 use spawn::SpawnPlugin;
+use transform_gizmo::TransformGizmoPlugin;
 use ui::UiPlugin;
 
 pub struct EditorPlugin;
@@ -22,6 +24,7 @@ impl Plugin for EditorPlugin {
             SelectionPlugin,
             UiPlugin,
             ColliderGizmosPlugin,
+            TransformGizmoPlugin,
         ));
     }
 }

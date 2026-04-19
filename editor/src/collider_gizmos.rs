@@ -1,7 +1,6 @@
+use crate::spawn::ActiveSceneRoot;
 use avian2d::prelude::ColliderConstructor;
 use bevy::prelude::*;
-use crate::spawn::ActiveSceneRoot;
-
 
 pub struct ColliderGizmosPlugin;
 
@@ -32,8 +31,11 @@ fn draw_colliders(
             continue;
         };
 
-        let translation = transform.translation();
-        let (yaw, _, _) = transform.to_scale_rotation_translation().1.to_euler(EulerRot::YXZ);
+        let translation = transform.translation().with_y(0.0);
+        let (yaw, _, _) = transform
+            .to_scale_rotation_translation()
+            .1
+            .to_euler(EulerRot::YXZ);
         let iso = Isometry3d::new(
             translation,
             Quat::from_rotation_x(std::f32::consts::FRAC_PI_2) * Quat::from_rotation_z(-yaw),
@@ -44,7 +46,11 @@ fn draw_colliders(
                 gizmos.circle(iso, *radius, Color::srgb(0.0, 1.0, 0.0));
             }
             ColliderConstructor::Rectangle { x_length, y_length } => {
-                gizmos.rect(iso, Vec2::new(*x_length, *y_length), Color::srgb(0.0, 1.0, 0.0));
+                gizmos.rect(
+                    iso,
+                    Vec2::new(*x_length, *y_length),
+                    Color::srgb(0.0, 1.0, 0.0),
+                );
             }
             _ => {}
         }
