@@ -2,13 +2,15 @@ use avian2d::prelude::{ColliderConstructor, RigidBody};
 use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
-use scene::MeshPath;
 use scene::save;
+use scene::MeshPath;
 
-use crate::file_dialog::{open_file_dialog, FilePicked};
+use crate::file_dialog::{open_file_dialog, save_file_dialog, FilePicked, SaveFilePicked};
 use crate::hierarchy::hierarchy_panel;
 use crate::selection::SelectedEntity;
-use crate::spawn::{asset_fs_path, fs_to_asset_path, ActiveSceneRoot, OpenScene, ScenePath};
+use crate::spawn::{
+    asset_fs_path, fs_to_asset_path, ActiveSceneRoot, OpenScene, SceneDirty, ScenePath,
+};
 
 pub struct UiPlugin;
 
@@ -18,19 +20,33 @@ impl Plugin for UiPlugin {
             EguiPrimaryContextPass,
             (toolbar, hierarchy_panel, inspector_panel).chain(),
         );
+        app.add_systems(Update, keyboard_shortcuts);
         app.add_observer(on_file_picked);
+        app.add_observer(on_save_file_picked);
     }
 }
 
-fn toolbar(mut contexts: EguiContexts, mut commands: Commands) -> Result {
+fn toolbar(
+    mut contexts: EguiContexts,
+    mut commands: Commands,
+    scene_root: Query<Has<SceneDirty>, With<ActiveSceneRoot>>,
+) -> Result {
+    let dirty = scene_root.single().unwrap_or(false);
+
     egui::TopBottomPanel::top("toolbar").show(contexts.ctx_mut()?, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open Scene").clicked() {
-                    open_file_dialog(
-                        &mut commands,
-                        &[("Scene files", &["scn", "gltf", "glb"])],
-                    );
+                    open_file_dialog(&mut commands, &[("Scene files", &["scn", "gltf", "glb"])]);
+                    ui.close();
+                }
+                let save_label = if dirty { "Save Scene *" } else { "Save Scene" };
+                if ui.button(save_label).clicked() {
+                    commands.run_system_cached(save_or_save_as_system);
+                    ui.close();
+                }
+                if ui.button("Save Scene As...").clicked() {
+                    save_file_dialog(&mut commands, &[("Scene files", &["scn"])]);
                     ui.close();
                 }
             });
@@ -40,21 +56,48 @@ fn toolbar(mut contexts: EguiContexts, mut commands: Commands) -> Result {
     Ok(())
 }
 
+fn keyboard_shortcuts(mut commands: Commands, input: Res<ButtonInput<KeyCode>>) {
+    let ctrl = input.pressed(KeyCode::ControlLeft) || input.pressed(KeyCode::ControlRight);
+    if ctrl && input.just_pressed(KeyCode::KeyS) {
+        commands.run_system_cached(save_or_save_as_system);
+    }
+}
+
 fn on_file_picked(
     trigger: On<FilePicked>,
     mut commands: Commands,
     scene_root: Query<Entity, With<ActiveSceneRoot>>,
 ) {
     let Some(asset_path) = fs_to_asset_path(&trigger.0) else {
-        error!("Selected file is outside the assets folder: {:?}", trigger.0);
+        error!(
+            "Selected file is outside the assets folder: {:?}",
+            trigger.0
+        );
         return;
     };
     if let Ok(entity) = scene_root.single() {
         commands
             .entity(entity)
             .despawn_related::<Children>()
+            .remove::<SceneDirty>()
             .insert(OpenScene(asset_path));
     }
+}
+
+fn on_save_file_picked(
+    trigger: On<SaveFilePicked>,
+    mut commands: Commands,
+    scene_root: Query<Entity, With<ActiveSceneRoot>>,
+) {
+    let path = trigger.0.with_extension("scn");
+    let Some(asset_path) = fs_to_asset_path(&path) else {
+        error!("Save path is outside the assets folder: {:?}", path);
+        return;
+    };
+    if let Ok(entity) = scene_root.single() {
+        commands.entity(entity).insert(ScenePath(asset_path));
+    }
+    commands.run_system_cached(save_scene);
 }
 
 fn inspector_panel(
@@ -75,10 +118,6 @@ fn inspector_panel(
 
             let Some(entity) = selected.0 else {
                 ui.label("Click a mesh to select a node.");
-                ui.separator();
-                if ui.button("Save Scene").clicked() {
-                    commands.run_system_cached(save_scene_system);
-                }
                 return;
             };
 
@@ -99,20 +138,48 @@ fn inspector_panel(
                     .show(ui, |ui| {
                         let mut translation = transform.translation;
                         let (yaw, pitch, roll) = transform.rotation.to_euler(EulerRot::YXZ);
-                        let mut euler = Vec3::new(yaw.to_degrees(), pitch.to_degrees(), roll.to_degrees());
+                        let mut euler =
+                            Vec3::new(yaw.to_degrees(), pitch.to_degrees(), roll.to_degrees());
                         let mut scale = transform.scale;
 
                         egui::Grid::new("transform_grid").show(ui, |ui| {
                             ui.label("Position");
-                            ui.add(egui::DragValue::new(&mut translation.x).prefix("X: ").speed(0.1));
-                            ui.add(egui::DragValue::new(&mut translation.y).prefix("Y: ").speed(0.1));
-                            ui.add(egui::DragValue::new(&mut translation.z).prefix("Z: ").speed(0.1));
+                            ui.add(
+                                egui::DragValue::new(&mut translation.x)
+                                    .prefix("X: ")
+                                    .speed(0.1),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut translation.y)
+                                    .prefix("Y: ")
+                                    .speed(0.1),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut translation.z)
+                                    .prefix("Z: ")
+                                    .speed(0.1),
+                            );
                             ui.end_row();
 
                             ui.label("Rotation");
-                            ui.add(egui::DragValue::new(&mut euler.x).prefix("Y: ").speed(1.0).suffix("°"));
-                            ui.add(egui::DragValue::new(&mut euler.y).prefix("X: ").speed(1.0).suffix("°"));
-                            ui.add(egui::DragValue::new(&mut euler.z).prefix("Z: ").speed(1.0).suffix("°"));
+                            ui.add(
+                                egui::DragValue::new(&mut euler.x)
+                                    .prefix("Y: ")
+                                    .speed(1.0)
+                                    .suffix("°"),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut euler.y)
+                                    .prefix("X: ")
+                                    .speed(1.0)
+                                    .suffix("°"),
+                            );
+                            ui.add(
+                                egui::DragValue::new(&mut euler.z)
+                                    .prefix("Z: ")
+                                    .speed(1.0)
+                                    .suffix("°"),
+                            );
                             ui.end_row();
 
                             ui.label("Scale");
@@ -123,7 +190,12 @@ fn inspector_panel(
                         });
 
                         transform.translation = translation;
-                        transform.rotation = Quat::from_euler(EulerRot::YXZ, euler.x.to_radians(), euler.y.to_radians(), euler.z.to_radians());
+                        transform.rotation = Quat::from_euler(
+                            EulerRot::YXZ,
+                            euler.x.to_radians(),
+                            euler.y.to_radians(),
+                            euler.z.to_radians(),
+                        );
                         transform.scale = scale;
                     });
                 ui.separator();
@@ -191,7 +263,7 @@ fn inspector_panel(
 
             ui.menu_button("+ Add Component", |ui| {
                 if !has_collider {
-                    if ui.button("ColliderConstructor").clicked() {
+                    if ui.button("Collider").clicked() {
                         commands
                             .entity(entity)
                             .insert(ColliderConstructor::Circle { radius: 1.0 });
@@ -205,11 +277,6 @@ fn inspector_panel(
                     }
                 }
             });
-
-            ui.separator();
-            if ui.button("Save Scene").clicked() {
-                commands.run_system_cached(save_scene_system);
-            }
         });
     Ok(())
 }
@@ -249,29 +316,17 @@ fn collider_editor(ui: &mut egui::Ui, collider: &mut ColliderConstructor) {
         ColliderConstructor::Circle { radius } => {
             ui.horizontal(|ui| {
                 ui.label("Radius");
-                ui.add(
-                    egui::DragValue::new(radius)
-                        .speed(0.1)
-                        ,
-                );
+                ui.add(egui::DragValue::new(radius).speed(0.1));
             });
         }
         ColliderConstructor::Rectangle { x_length, y_length } => {
             ui.horizontal(|ui| {
                 ui.label("X length");
-                ui.add(
-                    egui::DragValue::new(x_length)
-                        .speed(0.1)
-                        ,
-                );
+                ui.add(egui::DragValue::new(x_length).speed(0.1));
             });
             ui.horizontal(|ui| {
                 ui.label("Y length");
-                ui.add(
-                    egui::DragValue::new(y_length)
-                        .speed(0.1)
-                        ,
-                );
+                ui.add(egui::DragValue::new(y_length).speed(0.1));
             });
         }
         _ => {}
@@ -292,7 +347,25 @@ fn rigid_body_editor(ui: &mut egui::Ui, rigid_body: &mut RigidBody) {
         });
 }
 
-fn save_scene_system(world: &mut World) {
+fn save_or_save_as_system(world: &mut World) {
+    let root = world
+        .query_filtered::<(Entity, Has<ScenePath>), With<ActiveSceneRoot>>()
+        .single(world);
+
+    let Ok((_, has_path)) = root else {
+        error!("No ActiveSceneRoot found, cannot save");
+        return;
+    };
+
+    if has_path {
+        save_scene(world);
+    } else {
+        let mut commands = world.commands();
+        save_file_dialog(&mut commands, &[("Scene files", &["scn"])]);
+    }
+}
+
+fn save_scene(world: &mut World) {
     let root = world
         .query_filtered::<Entity, With<ActiveSceneRoot>>()
         .single(world);
@@ -302,17 +375,20 @@ fn save_scene_system(world: &mut World) {
         return;
     };
 
-    let loaded_path = world.get::<ScenePath>(root).map(|s| s.0.clone());
+    let scene_path = world.get::<ScenePath>(root).map(|s| s.0.clone());
 
-    let Some(loaded_path) = loaded_path else {
-        error!("No scene loaded, cannot save");
+    let Some(scene_path) = scene_path else {
+        error!("No .scn path set, use Save As to choose a destination");
         return;
     };
 
-    let scene_path = asset_fs_path(&loaded_path).with_extension("scn");
+    let fs_path = asset_fs_path(&scene_path);
 
-    match save(root, world, &scene_path) {
-        Ok(()) => info!("Scene saved to {}", scene_path.display()),
+    match save(root, world, &fs_path) {
+        Ok(()) => {
+            world.entity_mut(root).remove::<SceneDirty>();
+            info!("Scene saved to {}", fs_path.display());
+        }
         Err(e) => error!("Failed to save scene: {e}"),
     }
 }

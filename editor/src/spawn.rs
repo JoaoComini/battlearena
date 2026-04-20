@@ -7,6 +7,10 @@ use scene::LoadScene;
 #[derive(Component)]
 pub struct ActiveSceneRoot;
 
+/// Marks the active scene as having unsaved changes.
+#[derive(Component)]
+pub struct SceneDirty;
+
 /// Stores the asset-relative path of the currently loaded scene.
 #[derive(Component)]
 pub struct ScenePath(pub String);
@@ -30,13 +34,11 @@ fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
     for (entity, open) in &query {
         let path = open.0.clone();
         let mut entity_cmds = commands.entity(entity);
-        entity_cmds
-            .insert(ScenePath(path.clone()))
-            .remove::<OpenScene>();
+        entity_cmds.remove::<OpenScene>();
         if path.ends_with(".scn") {
-            entity_cmds.insert(LoadScene(path));
+            entity_cmds.insert((ScenePath(path.clone()), LoadScene(path)));
         } else {
-            entity_cmds.insert(ImportGltf(path));
+            entity_cmds.remove::<ScenePath>().insert(ImportGltf(path));
         }
     }
 }
