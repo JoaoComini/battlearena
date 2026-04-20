@@ -5,84 +5,56 @@ use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 use scene::MeshPath;
 use scene::save;
 
+use crate::file_dialog::{open_file_dialog, FilePicked};
 use crate::hierarchy::hierarchy_panel;
 use crate::selection::SelectedEntity;
-use crate::spawn::{asset_fs_path, ActiveSceneRoot, OpenScene, ScenePath};
+use crate::spawn::{asset_fs_path, fs_to_asset_path, ActiveSceneRoot, OpenScene, ScenePath};
 
 pub struct UiPlugin;
 
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<OpenSceneDialog>();
         app.add_systems(
             EguiPrimaryContextPass,
             (toolbar, hierarchy_panel, inspector_panel).chain(),
         );
+        app.add_observer(on_file_picked);
     }
 }
 
-#[derive(Resource, Default)]
-struct OpenSceneDialog {
-    open: bool,
-    path_input: String,
-}
-
-fn toolbar(
-    mut contexts: EguiContexts,
-    mut dialog: ResMut<OpenSceneDialog>,
-    mut commands: Commands,
-    scene_root: Query<Entity, With<ActiveSceneRoot>>,
-) -> Result {
+fn toolbar(mut contexts: EguiContexts, mut commands: Commands) -> Result {
     egui::TopBottomPanel::top("toolbar").show(contexts.ctx_mut()?, |ui| {
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open Scene").clicked() {
-                    dialog.open = true;
+                    open_file_dialog(
+                        &mut commands,
+                        &[("Scene files", &["scn", "gltf", "glb"])],
+                    );
                     ui.close();
                 }
             });
         });
     });
 
-    if dialog.open {
-        egui::Window::new("Open Scene")
-            .collapsible(false)
-            .resizable(false)
-            .show(contexts.ctx_mut()?, |ui| {
-                ui.label("Scene path:");
-                let response = ui.text_edit_singleline(&mut dialog.path_input);
-                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                    dialog.open = false;
-                    dialog.path_input.clear();
-                }
-                ui.horizontal(|ui| {
-                    let can_open = !dialog.path_input.is_empty();
-                    if ui
-                        .add_enabled(can_open, egui::Button::new("Open"))
-                        .clicked()
-                        || (response.lost_focus()
-                            && ui.input(|i| i.key_pressed(egui::Key::Enter))
-                            && can_open)
-                    {
-                        let path = dialog.path_input.trim().to_string();
-                        if let Ok(entity) = scene_root.single() {
-                            commands
-                                .entity(entity)
-                                .despawn_related::<Children>()
-                                .insert(OpenScene(path));
-                        }
-                        dialog.open = false;
-                        dialog.path_input.clear();
-                    }
-                    if ui.button("Cancel").clicked() {
-                        dialog.open = false;
-                        dialog.path_input.clear();
-                    }
-                });
-            });
-    }
-
     Ok(())
+}
+
+fn on_file_picked(
+    trigger: On<FilePicked>,
+    mut commands: Commands,
+    scene_root: Query<Entity, With<ActiveSceneRoot>>,
+) {
+    let Some(asset_path) = fs_to_asset_path(&trigger.0) else {
+        error!("Selected file is outside the assets folder: {:?}", trigger.0);
+        return;
+    };
+    if let Ok(entity) = scene_root.single() {
+        commands
+            .entity(entity)
+            .despawn_related::<Children>()
+            .insert(OpenScene(asset_path));
+    }
 }
 
 fn inspector_panel(

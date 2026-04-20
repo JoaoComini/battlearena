@@ -4,9 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-bevy = { workspace = true, features = ["mesh_picking"] }
+bevy = { workspace = true, features = ["mesh_picking", "file_watcher"] }
 serde = { workspace = true }
 avian2d = { workspace = true }
 bevy_egui = { workspace = true }
 scene = { workspace = true }
 import = { workspace = true }
+rfd = "0.15"

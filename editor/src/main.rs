@@ -13,6 +13,7 @@ fn main() {
                     .unwrap()
                     .to_string_lossy()
                     .into_owned(),
+                watch_for_changes_override: Some(true),
                 ..default()
             }),
         )

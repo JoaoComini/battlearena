@@ -30,7 +30,9 @@ fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
     for (entity, open) in &query {
         let path = open.0.clone();
         let mut entity_cmds = commands.entity(entity);
-        entity_cmds.insert(ScenePath(path.clone())).remove::<OpenScene>();
+        entity_cmds
+            .insert(ScenePath(path.clone()))
+            .remove::<OpenScene>();
         if path.ends_with(".scn") {
             entity_cmds.insert(LoadScene(path));
         } else {
@@ -40,14 +42,20 @@ fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
 }
 
 fn transform_to_position(
-    mut query: Query<(&GlobalTransform, &mut Position, Option<&mut Rotation>), Changed<GlobalTransform>>,
+    mut query: Query<
+        (&GlobalTransform, &mut Position, Option<&mut Rotation>),
+        Changed<GlobalTransform>,
+    >,
 ) {
     for (transform, mut position, rotation) in &mut query {
         let translation = transform.translation();
         position.x = translation.x;
         position.y = -translation.z;
         if let Some(mut rot) = rotation {
-            let (yaw, _, _) = transform.to_scale_rotation_translation().1.to_euler(EulerRot::YXZ);
+            let (yaw, _, _) = transform
+                .to_scale_rotation_translation()
+                .1
+                .to_euler(EulerRot::YXZ);
             *rot = Rotation::radians(yaw);
         }
     }
@@ -59,6 +67,17 @@ pub fn asset_fs_path(asset_path: &str) -> std::path::PathBuf {
         .parent()
         .unwrap()
         .join(asset_path)
+}
+
+/// Strips the assets root prefix from an absolute path, returning an asset-relative path.
+pub fn fs_to_asset_path(path: &std::path::Path) -> Option<String> {
+    let assets_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap();
+    path.strip_prefix(&assets_root)
+        .ok()
+        .and_then(|p| p.to_str())
+        .map(|s| s.to_string())
 }
 
 fn setup(mut commands: Commands) {
@@ -77,9 +96,5 @@ fn setup(mut commands: Commands) {
         Transform::from_xyz(4.0, 8.0, 4.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
 
-    commands.spawn((
-        ActiveSceneRoot,
-        Transform::default(),
-        Visibility::default(),
-    ));
+    commands.spawn((ActiveSceneRoot, Transform::default(), Visibility::default()));
 }

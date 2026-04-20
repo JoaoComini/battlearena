@@ -1,4 +1,5 @@
 mod collider_gizmos;
+mod file_dialog;
 mod free_camera;
 mod hierarchy;
 mod selection;
@@ -8,6 +9,7 @@ mod ui;
 
 use bevy::prelude::*;
 use collider_gizmos::ColliderGizmosPlugin;
+use file_dialog::FileDialogPlugin;
 use free_camera::FreeCameraPlugin;
 use selection::SelectionPlugin;
 use spawn::SpawnPlugin;
@@ -25,6 +27,7 @@ impl Plugin for EditorPlugin {
             UiPlugin,
             ColliderGizmosPlugin,
             TransformGizmoPlugin,
+            FileDialogPlugin,
         ));
     }
 }

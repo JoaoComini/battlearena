@@ -1,63 +1,10 @@
 (
     resources: {},
     entities: {
-        4294967268: (
+        17179869159: (
             components: {
                 "bevy_ecs::hierarchy::Children": ([
-                    4294967269,
-                    4294967274,
-                ]),
-                "bevy_ecs::name::Name": "ToyCar",
-                "bevy_transform::components::transform::Transform": (
-                    translation: (0.0, 0.0, 0.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                    scale: (1.0, 1.0, 1.0),
-                ),
-            },
-        ),
-        4294967269: (
-            components: {
-                "bevy_camera::visibility::Visibility": Inherited,
-                "bevy_ecs::hierarchy::ChildOf": (4294967268),
-                "bevy_transform::components::transform::Transform": (
-                    translation: (0.0, 0.0, 0.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                    scale: (1.0, 1.0, 1.0),
-                ),
-                "scene::components::MaterialPath": ("assets/models/arena.glb#Material0"),
-                "scene::components::MeshPath": ("assets/models/arena.glb#Mesh0/Primitive0"),
-            },
-        ),
-        4294967270: (
-            components: {
-                "bevy_ecs::hierarchy::Children": ([
-                    4294967271,
-                ]),
-                "bevy_ecs::name::Name": "Fabric",
-                "bevy_transform::components::transform::Transform": (
-                    translation: (0.0, 0.0, 0.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                    scale: (1.0, 1.0, 1.0),
-                ),
-            },
-        ),
-        4294967271: (
-            components: {
-                "bevy_camera::visibility::Visibility": Inherited,
-                "bevy_ecs::hierarchy::ChildOf": (4294967270),
-                "bevy_transform::components::transform::Transform": (
-                    translation: (0.0, 0.0, 0.0),
-                    rotation: (0.0, 0.0, 0.0, 1.0),
-                    scale: (1.0, 1.0, 1.0),
-                ),
-                "scene::components::MaterialPath": ("assets/models/arena.glb#Material1"),
-                "scene::components::MeshPath": ("assets/models/arena.glb#Mesh1/Primitive0"),
-            },
-        ),
-        4294967272: (
-            components: {
-                "bevy_ecs::hierarchy::Children": ([
-                    4294967273,
+                    21474836454,
                 ]),
                 "bevy_ecs::name::Name": "Glass",
                 "bevy_transform::components::transform::Transform": (
@@ -67,12 +14,51 @@
                 ),
             },
         ),
-        4294967273: (
+        21474836451: (
             components: {
-                "bevy_camera::visibility::Visibility": Inherited,
-                "bevy_ecs::hierarchy::ChildOf": (4294967272),
+                "bevy_ecs::hierarchy::Children": ([
+                    21474836453,
+                ]),
+                "bevy_ecs::name::Name": "Fabric",
                 "bevy_transform::components::transform::Transform": (
                     translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        21474836452: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (21474836456),
+                "bevy_transform::components::transform::Transform": (
+                    translation: (5.6421547, 5.007469, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialPath": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshPath": ("assets/models/arena.glb#Mesh0/Primitive0"),
+            },
+        ),
+        21474836453: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (21474836451),
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialPath": ("assets/models/arena.glb#Material1"),
+                "scene::components::MeshPath": ("assets/models/arena.glb#Mesh1/Primitive0"),
+            },
+        ),
+        21474836454: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (17179869159),
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-6.3737617, 0.0, 0.0),
                     rotation: (0.0, 0.0, 0.0, 1.0),
                     scale: (1.0, 1.0, 1.0),
                 ),
@@ -80,12 +66,26 @@
                 "scene::components::MeshPath": ("assets/models/arena.glb#Mesh2/Primitive0"),
             },
         ),
-        4294967274: (
+        21474836456: (
+            components: {
+                "bevy_ecs::hierarchy::Children": ([
+                    21474836452,
+                    21474836457,
+                ]),
+                "bevy_ecs::name::Name": "ToyCar",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        21474836457: (
             components: {
                 "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
-                    radius: 1.0,
+                    radius: 7.6,
                 ),
-                "bevy_ecs::hierarchy::ChildOf": (4294967268),
+                "bevy_ecs::hierarchy::ChildOf": (21474836456),
                 "bevy_ecs::name::Name": "Entity",
                 "bevy_transform::components::transform::Transform": (
                     translation: (0.0, 0.0, 0.0),
