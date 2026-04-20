@@ -1,10 +1,7 @@
-use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
+use avian2d::prelude::{Collider, Position, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
-use lightyear::prelude::input::native::ActionState;
 use protocol::Health;
-use inputs::Inputs;
-use crate::types::{AbilityDef, AbilityEffect, AbilityLoadout, AbilitySlot, MeleeHitbox};
-use crate::registry::AbilityRegistry;
+use crate::types::{AbilityLoadout, MeleeHitbox, ProjectileHitbox};
 
 pub fn tick_cooldowns(mut query: Query<&mut AbilityLoadout>, time: Res<Time>) {
     for mut loadout in &mut query {
@@ -15,7 +12,7 @@ pub fn tick_cooldowns(mut query: Query<&mut AbilityLoadout>, time: Res<Time>) {
     }
 }
 
-fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Collider> {
+pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Collider> {
     let half = (angle_deg / 2.0).to_radians();
     let steps = 8usize;
     let mut points = vec![Vec2::ZERO];
@@ -28,49 +25,17 @@ fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Col
     Collider::convex_hull(points)
 }
 
-pub fn activate_abilities(
-    mut query: Query<(Entity, &ActionState<Inputs>, &mut AbilityLoadout, &Position, &Rotation)>,
-    registry: Res<AbilityRegistry>,
-    assets: Res<Assets<AbilityDef>>,
+pub fn move_projectiles(
+    mut query: Query<(Entity, &mut ProjectileHitbox, &mut Position)>,
+    time: Res<Time>,
     mut commands: Commands,
 ) {
-    for (entity, action_state, mut loadout, position, rotation) in &mut query {
-        let Inputs::PlayerInput(input) = &action_state.0;
-        let pressed = [input.abilities.slot1, input.abilities.slot2];
-
-        for (i, slot) in loadout.slots.iter_mut().enumerate() {
-            let slot: &mut AbilitySlot = slot;
-            let Some(&slot_pressed) = pressed.get(i) else { continue };
-            if !slot_pressed || !slot.is_ready() {
-                continue;
-            }
-
-            let Some(def) = registry.get(&slot.key, &assets) else { continue };
-
-            slot.cooldown_remaining = def.cooldown_secs;
-
-            let AbilityEffect::MeleeHit { range, angle_deg, damage, lifetime_frames } = def.effect;
-
-            let facing_rad = rotation.as_radians();
-            let origin = position.0;
-
-            let Some(collider) = pie_slice_collider(range, angle_deg, facing_rad) else { continue };
-
-            commands.spawn((
-                MeleeHitbox {
-                    caster: entity,
-                    damage,
-                    range,
-                    angle_deg,
-                    lifetime_frames,
-                    origin,
-                    facing_rad,
-                    already_hit: Vec::new(),
-                },
-                Position(origin),
-                Rotation::radians(facing_rad),
-                collider,
-            ));
+    for (entity, mut proj, mut position) in &mut query {
+        let delta = proj.direction * proj.speed * time.delta_secs();
+        position.0 += delta;
+        proj.distance_traveled += delta.length();
+        if proj.distance_traveled >= proj.max_range {
+            commands.entity(entity).despawn();
         }
     }
 }
@@ -107,3 +72,31 @@ pub fn apply_hitbox_damage(
     }
 }
 
+pub fn apply_projectile_damage(
+    mut projectiles: Query<(Entity, &mut ProjectileHitbox, &Collider, &Position)>,
+    spatial_query: SpatialQuery,
+    mut health_query: Query<&mut Health>,
+    mut commands: Commands,
+) {
+    for (entity, mut proj, collider, position) in &mut projectiles {
+        let filter = SpatialQueryFilter::from_excluded_entities([proj.caster, entity]);
+
+        let hits = spatial_query.shape_intersections(
+            collider,
+            position.0,
+            0.0,
+            &filter,
+        );
+
+        for hit in hits {
+            if !proj.already_hit.contains(&hit) {
+                if let Ok(mut health) = health_query.get_mut(hit) {
+                    health.current -= proj.damage;
+                }
+                proj.already_hit.push(hit);
+                commands.entity(entity).despawn();
+                break;
+            }
+        }
+    }
+}

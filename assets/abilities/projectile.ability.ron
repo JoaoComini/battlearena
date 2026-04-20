@@ -1,0 +1,5 @@
+(
+    key: "projectile",
+    cooldown_secs: 0.5,
+    effect: Projectile(speed: 500.0, size: 12.0, damage: 20.0, max_range: 600.0),
+)

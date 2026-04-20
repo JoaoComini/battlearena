@@ -1,7 +1,7 @@
 use inputs::{AbilityInput, Direction, Inputs, PlayerInput};
 use physics::PlayerPhysicsBundle;
 use protocol::*;
-use avian2d::prelude::{Collider, Position, RigidBody};
+use avian2d::prelude::{Position};
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
 use lightyear::prelude::client::input::*;
@@ -18,7 +18,6 @@ impl Plugin for BattleArenaClientPlugin {
         );
         app.add_observer(handle_predicted_spawn);
         app.add_observer(handle_interpolated_spawn);
-        app.add_observer(handle_dummy_spawn);
     }
 }
 
@@ -113,21 +112,4 @@ pub(crate) fn handle_interpolated_spawn(
     commands
         .entity(entity)
         .insert(PlayerPhysicsBundle::default());
-}
-
-pub(crate) fn handle_dummy_spawn(
-    trigger: On<Add, Dummy>,
-    query: Query<Option<&Collider>, With<Dummy>>,
-    mut commands: Commands,
-) {
-    let entity = trigger.entity;
-    // Insert RigidBody::Static so Avian registers the replicated Collider
-    // for collision detection (move_and_slide respects static bodies).
-    let collider = query
-        .get(entity)
-        .ok()
-        .flatten()
-        .cloned()
-        .unwrap_or_else(|| Collider::circle(25.0));
-    commands.entity(entity).insert((RigidBody::Static, collider));
 }

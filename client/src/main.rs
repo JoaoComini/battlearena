@@ -1,6 +1,7 @@
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use clap::Parser;
+use shared::dummy::DummyPlugin;
 use core::time::Duration;
 use lightyear::link::RecvLinkConditioner;
 use lightyear::prelude::client::*;
@@ -9,7 +10,7 @@ use shared::{CLIENT_PORT, FIXED_TIMESTEP_HZ, SERVER_ADDR, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::AbilityPlugin;
+use abilities::{client::AbilityClientPlugin, AbilityPlugin};
 use setup::{connect, BattleArenaClient, ClientTransports};
 use systems::BattleArenaClientPlugin;
 
@@ -37,6 +38,8 @@ fn main() {
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaClientPlugin);
     app.add_plugins(AbilityPlugin);
+    app.add_plugins(AbilityClientPlugin);
+    app.add_plugins(DummyPlugin);
 
     app.world_mut().spawn(BattleArenaClient {
         client_id,

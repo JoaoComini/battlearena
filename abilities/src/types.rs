@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use physics::debug::DebugGizmoHitbox;
 use serde::{Deserialize, Serialize};
 
 #[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
@@ -41,7 +42,7 @@ pub struct AbilityDef {
     pub effect: AbilityEffect,
 }
 
-#[derive(Reflect, Serialize, Deserialize, Clone, Debug)]
+#[derive(Reflect, Component, Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum AbilityEffect {
     MeleeHit {
         range: f32,
@@ -49,7 +50,29 @@ pub enum AbilityEffect {
         damage: f32,
         lifetime_frames: u32,
     },
+    Projectile {
+        speed: f32,
+        size: f32,
+        damage: f32,
+        max_range: f32,
+    },
 }
+
+impl AbilityEffect {
+    pub fn to_debug_gizmo(&self) -> DebugGizmoHitbox {
+        match self {
+            AbilityEffect::MeleeHit { range, angle_deg, .. } => {
+                DebugGizmoHitbox::PieSlice { range: *range, angle_deg: *angle_deg }
+            }
+            AbilityEffect::Projectile { size, .. } => {
+                DebugGizmoHitbox::Circle { radius: *size }
+            }
+        }
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct HitboxCaster(pub Entity);
 
 #[derive(Component, Debug)]
 pub struct MeleeHitbox {
@@ -62,5 +85,17 @@ pub struct MeleeHitbox {
     pub origin: Vec2,
     /// Facing angle in radians at spawn time.
     pub facing_rad: f32,
+    pub already_hit: Vec<Entity>,
+}
+
+#[derive(Component, Debug)]
+pub struct ProjectileHitbox {
+    pub caster: Entity,
+    pub damage: f32,
+    pub speed: f32,
+    pub size: f32,
+    pub max_range: f32,
+    pub distance_traveled: f32,
+    pub direction: Vec2,
     pub already_hit: Vec<Entity>,
 }

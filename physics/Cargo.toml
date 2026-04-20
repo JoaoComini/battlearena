@@ -9,6 +9,7 @@ bevy = { workspace = true }
 lightyear = { workspace = true }
 avian2d = { workspace = true }
 inputs = { workspace = true }
+serde = { workspace = true }
 
 [lints]
 workspace = true

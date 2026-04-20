@@ -21,7 +21,10 @@ pub fn load_abilities(
     asset_server: Res<AssetServer>,
     mut registry: ResMut<AbilityRegistry>,
 ) {
-    for path in ["abilities://abilities/melee.ability.ron"] {
+    for path in [
+        "abilities://abilities/melee.ability.ron",
+        "abilities://abilities/projectile.ability.ron",
+    ] {
         let handle: Handle<AbilityDef> = asset_server.load(path);
         let key = path
             .trim_end_matches(".ability.ron")

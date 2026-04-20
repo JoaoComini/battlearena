@@ -26,6 +26,7 @@ dependencies = [
  "bevy",
  "inputs",
  "lightyear",
+ "physics",
  "protocol",
  "ron",
  "serde",
@@ -6516,6 +6517,7 @@ dependencies = [
  "bevy",
  "inputs",
  "lightyear",
+ "serde",
 ]
 
 [[package]]
@@ -7577,6 +7579,7 @@ dependencies = [
  "lightyear",
  "physics",
  "protocol",
+ "serde",
 ]
 
 [[package]]

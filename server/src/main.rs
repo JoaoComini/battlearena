@@ -1,5 +1,6 @@
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
+use shared::dummy::DummyPlugin;
 use core::time::Duration;
 use lightyear::prelude::server::*;
 use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
@@ -7,7 +8,7 @@ use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{AbilityPlugin};
+use abilities::{AbilityPlugin, server::AbilityServerPlugin};
 use setup::{BattleArenaServer, ServerTransports, start};
 use systems::BattleArenaServerPlugin;
 
@@ -27,6 +28,8 @@ fn main() {
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaServerPlugin);
     app.add_plugins(AbilityPlugin);
+    app.add_plugins(AbilityServerPlugin);
+    app.add_plugins(DummyPlugin);
 
     app.world_mut().spawn(BattleArenaServer {
         conditioner: None,

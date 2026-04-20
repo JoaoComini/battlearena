@@ -1,4 +1,6 @@
+pub mod client;
 pub mod registry;
+pub mod server;
 pub mod systems;
 pub mod types;
 
@@ -7,8 +9,7 @@ use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 use crate::registry::{load_abilities, AbilityRegistry};
-use crate::systems::{activate_abilities, apply_hitbox_damage, tick_cooldowns};
-use crate::types::{AbilityDef, AbilityLoadout};
+use crate::types::{AbilityDef, AbilityEffect, AbilityLoadout};
 
 pub struct AbilityPlugin;
 
@@ -17,12 +18,10 @@ impl Plugin for AbilityPlugin {
         app.init_asset::<AbilityDef>()
             .register_asset_loader(RonAbilityLoader)
             .init_resource::<AbilityRegistry>()
-            .add_systems(Startup, load_abilities)
-            .add_systems(FixedUpdate, (tick_cooldowns, activate_abilities, apply_hitbox_damage).chain());
+            .add_systems(Startup, load_abilities);
 
-        app.register_component::<AbilityLoadout>()
-            .add_prediction()
-            .add_should_rollback(|a: &AbilityLoadout, b: &AbilityLoadout| a != b);
+        app.register_component::<AbilityLoadout>();
+        app.register_component::<AbilityEffect>();
     }
 }
 

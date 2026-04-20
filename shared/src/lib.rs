@@ -1,3 +1,5 @@
+pub mod dummy;
+
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
