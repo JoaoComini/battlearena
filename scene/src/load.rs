@@ -1,21 +1,54 @@
 use bevy::prelude::*;
-use std::path::Path;
+use bevy::scene::DynamicSceneRoot;
 
-/// Returns a handle to a `DynamicScene` loaded from a `.scn.ron` file.
-///
-/// The caller is responsible for spawning the scene via `SceneSpawner` or
-/// inserting it as a `DynamicSceneRoot` component. The `ScenePlugin` system
-/// `resolve_gltf_mesh_refs` will then attach real `Mesh3d` handles to any
-/// spawned entity that carries a `GltfMeshRef`.
-///
-/// # Example
-/// ```no_run
-/// # use bevy::prelude::*;
-/// fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-///     let handle = scene::load_scene(&asset_server, "scenes/arena.scn.ron");
-///     commands.spawn(DynamicSceneRoot(handle));
-/// }
-/// ```
-pub fn load_scene(asset_server: &AssetServer, path: impl AsRef<Path>) -> Handle<DynamicScene> {
-    asset_server.load(path.as_ref().to_string_lossy().into_owned())
+use crate::components::{LoadScene, MaterialPath, MeshPath};
+
+pub struct ScenePlugin;
+
+impl Plugin for ScenePlugin {
+    fn build(&self, app: &mut App) {
+        app.register_type::<MeshPath>();
+        app.register_type::<MaterialPath>();
+        app.add_systems(Update, (initiate_load, resolve_mesh_paths, resolve_material_paths));
+    }
+}
+
+fn initiate_load(
+    mut commands: Commands,
+    query: Query<(Entity, &LoadScene)>,
+    asset_server: Res<AssetServer>,
+) {
+    for (entity, load) in &query {
+        let handle: Handle<DynamicScene> = asset_server.load(load.0.clone());
+        commands
+            .entity(entity)
+            .insert(DynamicSceneRoot(handle))
+            .remove::<LoadScene>();
+    }
+}
+
+fn resolve_mesh_paths(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<(Entity, &MeshPath), Without<Mesh3d>>,
+) {
+    for (entity, mesh_path) in &query {
+        commands
+            .entity(entity)
+            .insert(Mesh3d(asset_server.load(mesh_path.0.clone())));
+    }
+}
+
+fn resolve_material_paths(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<(Entity, &MaterialPath), Without<MeshMaterial3d<StandardMaterial>>>,
+) {
+    for (entity, material_path) in &query {
+        commands
+            .entity(entity)
+            .insert(MeshMaterial3d::<StandardMaterial>(
+                asset_server.load(material_path.0.clone()),
+            ));
+    }
 }

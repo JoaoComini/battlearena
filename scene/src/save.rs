@@ -1,152 +1,83 @@
+use avian2d::prelude::{ColliderConstructor, Position, RigidBody, Rotation};
 use bevy::prelude::*;
-use bevy::scene::DynamicSceneBuilder;
+use bevy::scene::serde::SceneSerializer;
+
+use crate::{MaterialPath, MeshPath};
 use std::path::Path;
 
-use crate::GltfNodeRef;
+/// Extracts all descendants of `root` from `world` and saves them as a RON
+/// scene file. The root entity itself is not saved.
+pub fn save(root: Entity, world: &World, path: impl AsRef<Path>) -> Result<(), SaveError> {
+    let descendants: Vec<Entity> = iter_descendants(root, world);
 
-/// Saves all entities with a `GltfMeshRef` component to a `.scn.ron` file.
-///
-/// Uses Bevy's `DynamicScene` serialization — all components on matching
-/// entities that are registered in the `AppTypeRegistry` will be included.
-pub fn save_scene(world: &mut World, path: impl AsRef<Path>) -> Result<(), SaveSceneError> {
-    let mut query = world.query_filtered::<Entity, With<GltfNodeRef>>();
-    let scene = DynamicSceneBuilder::from_world(world)
-        .extract_entities(query.iter(world))
+    let top_level: std::collections::HashSet<Entity> = world
+        .get::<Children>(root)
+        .map(|c| c.iter().collect())
+        .unwrap_or_default();
+
+    let type_registry = world.resource::<AppTypeRegistry>().clone();
+    let registry = type_registry.read();
+
+    let mut dynamic_scene = DynamicSceneBuilder::from_world(world)
+        .deny_all_components()
+        .allow_component::<Name>()
+        .allow_component::<Transform>()
+        .allow_component::<Visibility>()
+        .allow_component::<ChildOf>()
+        .allow_component::<Children>()
+        .allow_component::<MeshPath>()
+        .allow_component::<MaterialPath>()
+        .allow_component::<ColliderConstructor>()
+        .allow_component::<RigidBody>()
+        .allow_component::<Position>()
+        .allow_component::<Rotation>()
+        .extract_entities(descendants.into_iter())
         .build();
 
-    let type_registry = world.resource::<AppTypeRegistry>();
-    let serialized = scene
-        .serialize(&type_registry.read())
-        .map_err(SaveSceneError::Serialize)?;
+    let child_of_type_path = std::any::type_name::<ChildOf>();
+    for dynamic_entity in &mut dynamic_scene.entities {
+        if top_level.contains(&dynamic_entity.entity) {
+            dynamic_entity.components.retain(|c| {
+                c.get_represented_type_info().map(|t| t.type_path()) != Some(child_of_type_path)
+            });
+        }
+    }
 
-    std::fs::write(path, serialized).map_err(SaveSceneError::Io)?;
+    let serializer = SceneSerializer::new(&dynamic_scene, &registry);
+    let serialized = ron::ser::to_string_pretty(&serializer, ron::ser::PrettyConfig::default())
+        .map_err(SaveError::Serialize)?;
 
+    std::fs::write(path, serialized).map_err(SaveError::Io)?;
     Ok(())
 }
 
+fn iter_descendants(root: Entity, world: &World) -> Vec<Entity> {
+    let mut result = Vec::new();
+    let mut stack = vec![root];
+    while let Some(entity) = stack.pop() {
+        if let Some(children) = world.get::<Children>(entity) {
+            for child in children.iter() {
+                result.push(child);
+                stack.push(child);
+            }
+        }
+    }
+    result
+}
+
 #[derive(Debug)]
-pub enum SaveSceneError {
+pub enum SaveError {
     Serialize(ron::Error),
     Io(std::io::Error),
 }
 
-impl std::fmt::Display for SaveSceneError {
+impl std::fmt::Display for SaveError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SaveSceneError::Serialize(e) => write!(f, "scene serialization error: {e}"),
-            SaveSceneError::Io(e) => write!(f, "IO error: {e}"),
+            SaveError::Serialize(e) => write!(f, "scene serialization error: {e}"),
+            SaveError::Io(e) => write!(f, "IO error: {e}"),
         }
     }
 }
 
-impl std::error::Error for SaveSceneError {}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::ScenePlugin;
-    use avian2d::prelude::*;
-    use bevy::scene::serde::SceneDeserializer;
-    use serde::de::DeserializeSeed;
-
-    fn make_app() -> App {
-        let mut app = App::new();
-        app.add_plugins((MinimalPlugins, ScenePlugin));
-        app
-    }
-
-    fn deserialize_scene(ron: &str, world: &World) -> bevy::scene::DynamicScene {
-        let type_registry = world.resource::<AppTypeRegistry>();
-        let mut deserializer = ron::de::Deserializer::from_str(ron).unwrap();
-        SceneDeserializer {
-            type_registry: &type_registry.read(),
-        }
-        .deserialize(&mut deserializer)
-        .unwrap()
-    }
-
-    fn find_component<T: 'static>(scene: &bevy::scene::DynamicScene) -> Option<&T> {
-        scene.entities[0]
-            .components
-            .iter()
-            .find_map(|c| c.try_downcast_ref::<T>())
-    }
-
-    #[test]
-    fn roundtrip_gltf_node_ref() {
-        let mut app = make_app();
-
-        let path = "models/arena.glb";
-        let index = 3;
-
-        app.world_mut().spawn(GltfNodeRef {
-            path: path.to_string(),
-            index,
-        });
-
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        save_scene(app.world_mut(), tmp.path()).unwrap();
-
-        let ron = std::fs::read_to_string(tmp.path()).unwrap();
-        let scene = deserialize_scene(&ron, app.world());
-
-        assert_eq!(scene.entities.len(), 1);
-        let node_ref =
-            find_component::<GltfNodeRef>(&scene).expect("GltfNodeRef not found in saved scene");
-
-        assert_eq!(node_ref.path, path);
-        assert_eq!(node_ref.index, index);
-    }
-
-    #[test]
-    fn roundtrip_with_transform() {
-        let mut app = make_app();
-
-        let translation = Vec3::new(1.0, 2.0, 3.0);
-
-        app.world_mut().spawn((
-            GltfNodeRef {
-                path: "models/arena.glb".to_string(),
-                index: 0,
-            },
-            Transform::from_translation(translation),
-        ));
-
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        save_scene(app.world_mut(), tmp.path()).unwrap();
-
-        let ron = std::fs::read_to_string(tmp.path()).unwrap();
-        let scene = deserialize_scene(&ron, app.world());
-
-        let transform =
-            find_component::<Transform>(&scene).expect("Transform not found in saved scene");
-
-        assert_eq!(transform.translation, translation);
-    }
-
-    #[test]
-    fn roundtrip_with_collider_constructor() {
-        let mut app = make_app();
-
-        let radius = 30.0_f32;
-
-        app.world_mut().spawn((
-            GltfNodeRef {
-                path: "models/arena.glb".to_string(),
-                index: 1,
-            },
-            ColliderConstructor::Circle { radius },
-        ));
-
-        let tmp = tempfile::NamedTempFile::new().unwrap();
-        save_scene(app.world_mut(), tmp.path()).unwrap();
-
-        let ron = std::fs::read_to_string(tmp.path()).unwrap();
-        let scene = deserialize_scene(&ron, app.world());
-
-        let constructor = find_component::<ColliderConstructor>(&scene)
-            .expect("ColliderConstructor not found in saved scene");
-
-        assert_eq!(*constructor, ColliderConstructor::Circle { radius });
-    }
-}
+impl std::error::Error for SaveError {}

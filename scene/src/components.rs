@@ -1,20 +1,18 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-/// Reference to a node within a GLTF file, identified by index.
-///
-/// Stored as plain data so it can be serialized via Bevy's DynamicScene /
-/// reflection pipeline without involving asset handles. The `ScenePlugin`
-/// system `resolve_gltf_node_refs` converts this into mesh/material child
-/// entities at runtime using `GltfAssetLabel::Node(index)`.
-///
-/// The editor is responsible for mapping node names to indices when
-/// constructing scene entities.
+/// Asset path to a mesh, e.g. `"models/arena.glb#Mesh0/Primitive0"`.
+/// Resolved at runtime into a `Mesh3d` component by `ImportPlugin`.
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug)]
 #[reflect(Component, Serialize, Deserialize)]
-pub struct GltfNodeRef {
-    /// Asset path to the GLTF file, e.g. `"models/arena.glb"`.
-    pub path: String,
-    /// Zero-based node index within the GLTF.
-    pub index: usize,
-}
+pub struct MeshPath(pub String);
+
+/// Asset path to a standard material, e.g. `"models/arena.glb#Material0"`.
+/// Resolved at runtime into a `MeshMaterial3d<StandardMaterial>` by `ImportPlugin`.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug)]
+#[reflect(Component, Serialize, Deserialize)]
+pub struct MaterialPath(pub String);
+
+/// Place this component on an entity to load a `.scn` dynamic scene as children.
+#[derive(Component)]
+pub struct LoadScene(pub String);
