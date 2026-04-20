@@ -1,8 +1,25 @@
+mod collider_gizmos;
+mod file_dialog;
+mod free_camera;
+mod hierarchy;
+mod selection;
+mod spawn;
+mod transform_gizmo;
+mod ui;
+
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
-use editor::EditorPlugin;
 use import::ImportPlugin;
 use scene::ScenePlugin;
+
+use file_dialog::FileDialogPlugin;
+use free_camera::FreeCameraPlugin;
+use selection::SelectionPlugin;
+use spawn::SpawnPlugin;
+use transform_gizmo::TransformGizmoPlugin;
+use ui::UiPlugin;
+
+use collider_gizmos::ColliderGizmosPlugin;
 
 fn main() {
     App::new()
@@ -17,10 +34,18 @@ fn main() {
                 ..default()
             }),
         )
-        .add_plugins(MeshPickingPlugin)
-        .add_plugins(EguiPlugin::default())
-        .add_plugins(ScenePlugin)
-        .add_plugins(ImportPlugin)
-        .add_plugins(EditorPlugin)
+        .add_plugins((
+            ImportPlugin,
+            EguiPlugin::default(),
+            ScenePlugin,
+            MeshPickingPlugin,
+            FreeCameraPlugin,
+            SpawnPlugin,
+            SelectionPlugin,
+            UiPlugin,
+            TransformGizmoPlugin,
+            ColliderGizmosPlugin,
+            FileDialogPlugin,
+        ))
         .run();
 }
