@@ -1,20 +1,15 @@
 [package]
-name = "abilities"
+name = "characters"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
 bevy = { workspace = true }
-lightyear = { workspace = true }
-avian2d = { workspace = true }
 serde = { workspace = true }
 ron = { workspace = true }
 protocol = { workspace = true }
-inputs = { workspace = true }
-shared = { workspace = true }
 physics = { workspace = true }
-characters = { workspace = true }
 
 [lints]
 workspace = true

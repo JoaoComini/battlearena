@@ -1,20 +1,23 @@
 use avian2d::prelude::{Collider, Position, Rotation};
 use bevy::prelude::*;
+use characters::registry::CharacterRegistry;
+use characters::types::CharacterDef;
 use lightyear::prelude::*;
-use protocol::UseAbility;
+use protocol::{CharacterType, UseAbility};
 use crate::registry::AbilityRegistry;
 use crate::systems::{
     apply_hitbox_damage, apply_projectile_damage, move_projectiles,
     pie_slice_collider, tick_cooldowns,
 };
 use crate::types::{
-    AbilityDef, AbilityEffect, AbilityLoadout, HitboxCaster, MeleeHitbox, ProjectileHitbox,
+    AbilityDef, AbilityEffect, AbilityLoadout, AbilitySlot, HitboxCaster, MeleeHitbox, ProjectileHitbox,
 };
 
 pub struct AbilityServerPlugin;
 
 impl Plugin for AbilityServerPlugin {
     fn build(&self, app: &mut App) {
+        app.add_observer(on_character_type_added);
         app.add_observer(on_ability_hitbox_spawned);
         app.add_systems(
             FixedUpdate,
@@ -28,6 +31,30 @@ impl Plugin for AbilityServerPlugin {
                 .chain(),
         );
     }
+}
+
+fn on_character_type_added(
+    trigger: On<Add, CharacterType>,
+    char_types: Query<&CharacterType>,
+    registry: Res<CharacterRegistry>,
+    char_assets: Res<Assets<CharacterDef>>,
+    mut commands: Commands,
+) {
+    let entity = trigger.entity;
+    let Ok(char_type) = char_types.get(entity) else {
+        return;
+    };
+    let char_key = char_type.0.as_str();
+
+    let ability_slots = if let Some(def) = registry.get(char_key, &char_assets) {
+        def.ability_slots.clone()
+    } else {
+        vec!["melee".to_string()]
+    };
+
+    commands.entity(entity).insert(AbilityLoadout {
+        slots: ability_slots.iter().map(|k| AbilitySlot::new(k)).collect(),
+    });
 }
 
 fn on_ability_hitbox_spawned(

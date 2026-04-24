@@ -1,17 +1,16 @@
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use clap::Parser;
 use shared::dummy::DummyPlugin;
 use core::time::Duration;
-use lightyear::link::RecvLinkConditioner;
 use lightyear::prelude::client::*;
-use shared::{CLIENT_PORT, FIXED_TIMESTEP_HZ, SERVER_ADDR, SHARED_SETTINGS};
+use shared::FIXED_TIMESTEP_HZ;
 
+mod menu;
 mod setup;
 mod systems;
 
 use abilities::{client::AbilityClientPlugin, AbilityPlugin};
-use setup::{connect, BattleArenaClient, ClientTransports};
+use menu::MenuPlugin;
 use systems::BattleArenaClientPlugin;
 
 use {
@@ -19,49 +18,27 @@ use {
     renderer::client::BattleArenaClientRendererPlugin, renderer::BattleArenaRendererPlugin,
 };
 
-#[derive(Parser, Debug)]
-#[command(version, about)]
-struct Cli {
-    #[arg(short = 'c', long, default_value = None)]
-    client_id: Option<u64>,
-}
-
 fn main() {
-    let cli = Cli::parse();
-    let client_id = cli
-        .client_id
-        .expect("You need to specify a client_id via `-c ID`");
     let tick_duration = Duration::from_secs_f64(1.0 / FIXED_TIMESTEP_HZ);
 
-    let mut app = build_app(tick_duration, client_id);
+    let mut app = build_app(tick_duration);
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaClientPlugin);
     app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityClientPlugin);
     app.add_plugins(DummyPlugin);
-
-    app.world_mut().spawn(BattleArenaClient {
-        client_id,
-        client_port: CLIENT_PORT,
-        server_addr: SERVER_ADDR,
-        conditioner: Some(RecvLinkConditioner::new(
-            lightyear::prelude::LinkConditionerConfig::average_condition(),
-        )),
-        transport: ClientTransports::Udp,
-        shared: SHARED_SETTINGS,
-    });
-    app.add_systems(Startup, connect);
+    app.add_plugins(MenuPlugin);
 
     app.add_plugins((
         BattleArenaRendererPlugin,
-        BattleArenaClientRendererPlugin::new(format!("Client {client_id}")),
+        BattleArenaClientRendererPlugin::new("BattleArena".to_string()),
     ));
 
     app.run();
 }
 
-fn build_app(tick_duration: Duration, client_id: u64) -> App {
+fn build_app(tick_duration: Duration) -> App {
     let mut app = App::new();
     app.add_plugins(assets::AssetPlugin);
     app.add_plugins(
@@ -78,7 +55,7 @@ fn build_app(tick_duration: Duration, client_id: u64) -> App {
                 })
                 .set(bevy::window::WindowPlugin {
                     primary_window: Some(bevy::window::Window {
-                        title: format!("BattleArena: Client {client_id}"),
+                        title: "BattleArena".to_string(),
                         resolution: (1024, 768).into(),
                         present_mode: PresentMode::AutoVsync,
                         prevent_default_event_handling: true,
