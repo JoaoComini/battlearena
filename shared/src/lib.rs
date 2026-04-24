@@ -1,6 +1,7 @@
 pub mod dummy;
 
 use bevy::prelude::*;
+use characters::CharactersPlugin;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
@@ -37,6 +38,7 @@ impl Plugin for SharedPlugin {
         app.add_plugins(InputPlugin);
         app.add_plugins(ScenePlugin);
         // app.add_plugins(DummyPlugin);
+        app.add_plugins(CharactersPlugin);
         app.add_systems(Startup, spawn_scene);
     }
 }

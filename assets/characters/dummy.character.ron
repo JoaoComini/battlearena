@@ -1,0 +1,7 @@
+(
+    key: "dummy",
+    max_health: 100.0,
+    move_speed: 0.0,
+    ability_slots: [],
+    playable: false,
+)

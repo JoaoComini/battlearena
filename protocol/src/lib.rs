@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use physics::PlayerPhysicsBundle;
+use physics::{MovementSpeed, PlayerPhysicsBundle};
 use serde::{Deserialize, Serialize};
 
 #[derive(Bundle)]
@@ -41,6 +41,10 @@ fn lerp_health(start: Health, end: Health, t: f32) -> Health {
     }
 }
 
+/// Identifies which character definition this entity uses.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CharacterType(pub String);
+
 // Messages
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UseAbility {
@@ -69,6 +73,14 @@ impl Plugin for ProtocolPlugin {
             .add_should_rollback(|a: &Rotation, b: &Rotation| false);
 
         app.register_component::<Health>();
+
+        app.register_component::<MovementSpeed>()
+            .add_prediction()
+            .add_should_rollback(|a: &MovementSpeed, b: &MovementSpeed| {
+                (a.0 - b.0).abs() >= 0.001
+            });
+
+        app.register_component::<CharacterType>();
 
         // channels
         app.add_channel::<Channel1>(ChannelSettings {

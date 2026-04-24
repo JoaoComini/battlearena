@@ -2555,6 +2555,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "characters"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "chiapos-chacha8"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7528,6 +7537,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_egui",
+ "characters",
  "lightyear",
  "physics",
  "protocol",
@@ -7575,6 +7585,7 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "characters",
  "inputs",
  "lightyear",
  "physics",

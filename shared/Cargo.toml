@@ -13,6 +13,7 @@ physics = { workspace = true }
 inputs = { workspace = true }
 serde = { workspace = true }
 scene = {workspace = true}
+characters = { workspace = true }
 
 [lints]
 workspace = true
