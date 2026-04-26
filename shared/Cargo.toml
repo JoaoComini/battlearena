@@ -12,7 +12,6 @@ protocol = { workspace = true }
 physics = { workspace = true }
 inputs = { workspace = true }
 serde = { workspace = true }
-characters = { workspace = true }
 
 [lints]
 workspace = true

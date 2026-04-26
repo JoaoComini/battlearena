@@ -24,7 +24,6 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
- "characters",
  "inputs",
  "lightyear",
  "physics",
@@ -2553,17 +2552,6 @@ dependencies = [
  "cipher",
  "poly1305",
  "zeroize",
-]
-
-[[package]]
-name = "characters"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "physics",
- "protocol",
- "ron",
- "serde",
 ]
 
 [[package]]
@@ -7540,7 +7528,6 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_egui",
- "characters",
  "lightyear",
  "physics",
  "protocol",
@@ -7588,7 +7575,6 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
- "characters",
  "inputs",
  "lightyear",
  "physics",

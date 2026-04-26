@@ -7,12 +7,8 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use inputs::Inputs;
 use lightyear::prelude::{input::native::ActionState, PredictionSystems};
-use serde::{Deserialize, Serialize};
 
 pub const PLAYER_SIZE: f32 = 50.0;
-
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MovementSpeed(pub f32);
 
 #[derive(Component, Default)]
 pub struct MoveAndSlideResult(pub Vec2, pub Vec2, pub f32);
@@ -165,10 +161,9 @@ pub fn apply_move_and_slide(
     }
 }
 
-pub fn set_lin_velocity(
-    mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>, &MovementSpeed)>,
-) {
-    for (mut velocity, input, speed) in &mut query {
+pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
+    const MOVE_SPEED: f32 = 200.0;
+    for (mut velocity, input) in &mut query {
         let Inputs::PlayerInput(player_input) = &input.0;
         let direction = &player_input.movement;
         let mut dir = Vec2::ZERO;
@@ -184,7 +179,7 @@ pub fn set_lin_velocity(
         if direction.right {
             dir.x += 1.0;
         }
-        velocity.0 = dir.normalize_or_zero() * speed.0;
+        velocity.0 = dir.normalize_or_zero() * MOVE_SPEED;
     }
 }
 

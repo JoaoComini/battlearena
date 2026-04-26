@@ -1,7 +1,0 @@
-(
-    key: "kaps",
-    max_health: 80.0,
-    move_speed: 260.0,
-    ability_slots: ["projectile"],
-    playable: true,
-)

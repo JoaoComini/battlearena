@@ -22,8 +22,8 @@ pub fn load_abilities(
     mut registry: ResMut<AbilityRegistry>,
 ) {
     for path in [
-        "abilities://melee.ability.ron",
-        "abilities://projectile.ability.ron",
+        "abilities://abilities/melee.ability.ron",
+        "abilities://abilities/projectile.ability.ron",
     ] {
         let handle: Handle<AbilityDef> = asset_server.load(path);
         let key = path

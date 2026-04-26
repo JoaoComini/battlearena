@@ -9,7 +9,6 @@ mod setup;
 mod systems;
 
 use abilities::{AbilityPlugin, server::AbilityServerPlugin};
-use characters::server::CharactersServerPlugin;
 use setup::{BattleArenaServer, ServerTransports, start};
 use systems::BattleArenaServerPlugin;
 
@@ -30,7 +29,6 @@ fn main() {
     app.add_plugins(BattleArenaServerPlugin);
     app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityServerPlugin);
-    app.add_plugins(CharactersServerPlugin);
     app.add_plugins(DummyPlugin);
 
     app.world_mut().spawn(BattleArenaServer {

@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use physics::{MovementSpeed, PlayerPhysicsBundle};
+use physics::PlayerPhysicsBundle;
 use serde::{Deserialize, Serialize};
 
 #[derive(Bundle)]
@@ -46,40 +46,15 @@ fn lerp_health(start: Health, end: Health, t: f32) -> Health {
     }
 }
 
-#[derive(Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub enum CharacterKey {
-    Comini,
-    Kaps,
-}
-
-impl CharacterKey {
-    pub fn as_str(&self) -> &str {
-        match self {
-            CharacterKey::Comini => "comini",
-            CharacterKey::Kaps => "kaps",
-        }
-    }
-}
-
-/// Identifies which character definition this entity uses.
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CharacterType(pub CharacterKey);
-
 // Messages
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct UseAbility {
     pub slot: usize,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct SelectCharacter {
-    pub key: CharacterKey,
-}
-
 // Channels
 pub struct Channel1;
 pub struct AbilityChannel;
-pub struct LobbyChannel;
 
 // Protocol
 #[derive(Clone)]
@@ -104,14 +79,6 @@ impl Plugin for ProtocolPlugin {
             .add_should_rollback(|a: &Health, b: &Health| (a.current - b.current).abs() >= 0.001)
             .add_interpolation_with(lerp_health);
 
-        app.register_component::<MovementSpeed>()
-            .add_prediction()
-            .add_should_rollback(|a: &MovementSpeed, b: &MovementSpeed| {
-                (a.0 - b.0).abs() >= 0.001
-            });
-
-        app.register_component::<CharacterType>();
-
         // channels
         app.add_channel::<Channel1>(ChannelSettings {
             mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
@@ -125,16 +92,7 @@ impl Plugin for ProtocolPlugin {
         })
         .add_direction(NetworkDirection::ClientToServer);
 
-        app.add_channel::<LobbyChannel>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-            ..default()
-        })
-        .add_direction(NetworkDirection::ClientToServer);
-
         app.register_message::<UseAbility>()
-            .add_direction(NetworkDirection::ClientToServer);
-
-        app.register_message::<SelectCharacter>()
             .add_direction(NetworkDirection::ClientToServer);
     }
 }

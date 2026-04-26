@@ -2,7 +2,6 @@ pub mod dummy;
 
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use characters::CharactersPlugin;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
@@ -46,7 +45,6 @@ impl Plugin for SharedPlugin {
         app.add_plugins(ProtocolPlugin);
         app.add_plugins(PhysicsPlugin);
         app.add_plugins(InputPlugin);
-        app.add_plugins(CharactersPlugin);
         app.add_systems(Startup, spawn_scene);
     }
 }

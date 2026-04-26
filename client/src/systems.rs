@@ -76,9 +76,18 @@ pub(crate) fn buffer_input(
 
 pub(crate) fn handle_predicted_spawn(
     trigger: On<Add, (PlayerId, Predicted)>,
+    mut query: Query<&mut PlayerColor, With<Predicted>>,
     mut commands: Commands,
 ) {
     let entity = trigger.entity;
+    let Ok(mut color) = query.get_mut(entity) else {
+        return;
+    };
+    let hsva = Hsva {
+        saturation: 0.4,
+        ..Hsva::from(color.0)
+    };
+    color.0 = Color::from(hsva);
     commands.entity(entity).insert((
         PlayerPhysicsBundle::default(),
         InputMarker::<Inputs>::default(),

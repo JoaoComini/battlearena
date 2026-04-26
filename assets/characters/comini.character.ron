@@ -1,7 +1,0 @@
-(
-    key: "comini",
-    max_health: 120.0,
-    move_speed: 220.0,
-    ability_slots: ["melee"],
-    playable: true,
-)
