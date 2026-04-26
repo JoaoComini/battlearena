@@ -219,10 +219,13 @@ fn send_initial_character_selection(
     mut pending: ResMut<PendingCharacterSelect>,
     mut sender: Query<&mut MessageSender<SelectCharacter>>,
 ) {
-    let Some(key) = pending.0.take() else {
+    if pending.0.is_none() {
+        return;
+    }
+    let Ok(mut sender) = sender.single_mut() else {
         return;
     };
-    let Ok(mut sender) = sender.single_mut() else {
+    let Some(key) = pending.0.take() else {
         return;
     };
     sender.send::<LobbyChannel>(SelectCharacter { key });
