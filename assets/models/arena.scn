@@ -1,0 +1,4 @@
+(
+    source: "assets/models/arena.glb",
+    overrides: {},
+)

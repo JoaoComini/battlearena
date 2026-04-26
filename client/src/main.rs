@@ -1,7 +1,6 @@
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
 use clap::Parser;
-use shared::dummy::DummyPlugin;
 use core::time::Duration;
 use lightyear::link::RecvLinkConditioner;
 use lightyear::prelude::client::*;
@@ -39,7 +38,6 @@ fn main() {
     app.add_plugins(BattleArenaClientPlugin);
     app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityClientPlugin);
-    app.add_plugins(DummyPlugin);
 
     app.world_mut().spawn(BattleArenaClient {
         client_id,
@@ -68,6 +66,11 @@ fn build_app(tick_duration: Duration, client_id: u64) -> App {
             bevy::DefaultPlugins
                 .build()
                 .set(bevy::asset::AssetPlugin {
+                    file_path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
                     meta_check: bevy::asset::AssetMetaCheck::Never,
                     ..default()
                 })

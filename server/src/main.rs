@@ -1,6 +1,5 @@
 use bevy::log::{Level, LogPlugin};
 use bevy::prelude::*;
-use shared::dummy::DummyPlugin;
 use core::time::Duration;
 use lightyear::prelude::server::*;
 use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
@@ -8,16 +7,14 @@ use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{AbilityPlugin, server::AbilityServerPlugin};
-use setup::{BattleArenaServer, ServerTransports, start};
+use abilities::{server::AbilityServerPlugin, AbilityPlugin};
+use setup::{start, BattleArenaServer, ServerTransports};
 use systems::BattleArenaServerPlugin;
 
 #[cfg(feature = "gui")]
 use {
-    bevy::window::PresentMode,
-    bevy::winit::WinitSettings,
-    renderer::BattleArenaRendererPlugin,
-    renderer::server::BattleArenaServerRendererPlugin,
+    bevy::window::PresentMode, bevy::winit::WinitSettings,
+    renderer::server::BattleArenaServerRendererPlugin, renderer::BattleArenaRendererPlugin,
 };
 
 fn main() {
@@ -29,7 +26,6 @@ fn main() {
     app.add_plugins(BattleArenaServerPlugin);
     app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityServerPlugin);
-    app.add_plugins(DummyPlugin);
 
     app.world_mut().spawn(BattleArenaServer {
         conditioner: None,
@@ -58,6 +54,11 @@ fn build_app(tick_duration: Duration) -> App {
             bevy::DefaultPlugins
                 .build()
                 .set(bevy::asset::AssetPlugin {
+                    file_path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .parent()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned(),
                     meta_check: bevy::asset::AssetMetaCheck::Never,
                     ..default()
                 })

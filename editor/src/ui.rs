@@ -3,7 +3,6 @@ use bevy::prelude::*;
 use bevy_egui::{egui, EguiContexts, EguiPrimaryContextPass};
 
 use scene::save;
-use scene::MeshPath;
 
 use crate::file_dialog::{open_file_dialog, save_file_dialog, FilePicked, SaveFilePicked};
 use crate::hierarchy::hierarchy_panel;
@@ -103,7 +102,7 @@ fn on_save_file_picked(
 fn inspector_panel(
     mut contexts: EguiContexts,
     selected: Res<SelectedEntity>,
-    node_query: Query<(Option<&MeshPath>, Option<&Name>)>,
+    node_query: Query<Option<&Name>>,
     mesh_query: Query<&Mesh3d>,
     mut transform_query: Query<&mut Transform>,
     mut collider_query: Query<Option<&mut ColliderConstructor>>,
@@ -121,12 +120,9 @@ fn inspector_panel(
                 return;
             };
 
-            if let Ok((mesh_path, name)) = node_query.get(entity) {
+            if let Ok(name) = node_query.get(entity) {
                 if let Some(n) = name {
                     ui.label(format!("Name: {}", n));
-                }
-                if let Some(p) = mesh_path {
-                    ui.label(format!("Mesh: {}", p.0));
                 }
             }
             ui.separator();
@@ -212,7 +208,7 @@ fn inspector_panel(
             if let Ok(Some(mut collider)) = collider_query.get_mut(entity) {
                 let mut remove = false;
 
-                egui::CollapsingHeader::new("ColliderConstructor")
+                egui::CollapsingHeader::new("Collider")
                     .default_open(true)
                     .show(ui, |ui| {
                         collider_editor(ui, &mut collider);

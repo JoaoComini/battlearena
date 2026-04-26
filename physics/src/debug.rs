@@ -68,18 +68,18 @@ fn draw_ability_hitboxes(
                 let half = (angle_deg / 2.0).to_radians();
                 let adjusted = facing_rad + std::f32::consts::FRAC_PI_2;
                 let steps = 8usize;
-                let center = Vec3::new(origin.x, 1.0, -origin.y);
+                let center = Vec3::new(origin.x, 0.0, -origin.y);
                 let mut prev = center;
                 let first = {
                     let p = Vec2::from_angle(adjusted - half) * range + origin;
-                    Vec3::new(p.x, 1.0, -p.y)
+                    Vec3::new(p.x, 0.0, -p.y)
                 };
                 gizmos.line(center, first, bevy::color::palettes::css::ORANGE);
                 for i in 0..=steps {
                     let t = i as f32 / steps as f32;
                     let a = adjusted - half + t * 2.0 * half;
                     let p2d = Vec2::from_angle(a) * range + origin;
-                    let p3d = Vec3::new(p2d.x, 1.0, -p2d.y);
+                    let p3d = Vec3::new(p2d.x, 0.0, -p2d.y);
                     if i > 0 {
                         gizmos.line(prev, p3d, bevy::color::palettes::css::ORANGE);
                     }
@@ -89,7 +89,7 @@ fn draw_ability_hitboxes(
             }
             DebugGizmoHitbox::Circle { radius } => {
                 let origin = position.0;
-                let center = Vec3::new(origin.x, 1.0, -origin.y);
+                let center = Vec3::new(origin.x, 0.0, -origin.y);
                 let iso3 = Isometry3d::new(center, Quat::from_rotation_x(std::f32::consts::FRAC_PI_2));
                 gizmos.circle(iso3, *radius, bevy::color::palettes::css::ORANGE);
             }

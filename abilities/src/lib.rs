@@ -4,12 +4,12 @@ pub mod server;
 pub mod systems;
 pub mod types;
 
+use crate::registry::{load_abilities, AbilityRegistry};
+use crate::types::{AbilityDef, AbilityEffect, AbilityLoadout};
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use crate::registry::{load_abilities, AbilityRegistry};
-use crate::types::{AbilityDef, AbilityEffect, AbilityLoadout};
 
 pub struct AbilityPlugin;
 

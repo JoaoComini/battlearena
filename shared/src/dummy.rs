@@ -5,13 +5,11 @@ use physics::PLAYER_SIZE;
 use protocol::Health;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
 pub struct Dummy;
 
 #[derive(Resource)]
 struct DummyRespawnTimer(Timer);
-
 
 pub struct DummyPlugin;
 
@@ -22,39 +20,38 @@ impl Plugin for DummyPlugin {
         app.add_observer(on_dummy_spawn);
         app.add_systems(Update, draw_dummy_healthbar);
         app.add_systems(Startup, spawn_dummy);
-        app.add_systems(FixedUpdate, (check_dummy_health, tick_dummy_respawn).chain());
+        app.add_systems(
+            FixedUpdate,
+            (check_dummy_health, tick_dummy_respawn).chain(),
+        );
     }
 }
 
-fn on_dummy_spawn(
-    trigger: On<Add, Dummy>,
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
+fn on_dummy_spawn(trigger: On<Add, Dummy>, mut commands: Commands) {
     let entity = trigger.entity;
-    let capsule_height = PLAYER_SIZE;
-    let capsule_radius = PLAYER_SIZE * 0.35;
-    let half_height = capsule_height * 0.5 + capsule_radius;
-
-    let visual = commands
-        .spawn((
-            Mesh3d(meshes.add(Capsule3d::new(capsule_radius, capsule_height))),
-            MeshMaterial3d(materials.add(StandardMaterial {
+    commands.queue(move |world: &mut World| {
+        let capsule_height = PLAYER_SIZE;
+        let capsule_radius = PLAYER_SIZE * 0.35;
+        let half_height = capsule_height * 0.5 + capsule_radius;
+        let mesh = world
+            .resource_mut::<Assets<Mesh>>()
+            .add(Capsule3d::new(capsule_radius, capsule_height));
+        let material = world
+            .resource_mut::<Assets<StandardMaterial>>()
+            .add(StandardMaterial {
                 base_color: Color::srgb(0.1, 0.3, 1.0),
                 ..default()
-            })),
+            });
+        world.spawn((
+            Mesh3d(mesh),
+            MeshMaterial3d(material),
             Transform::from_xyz(0.0, half_height, 0.0),
-        ))
-        .id();
-
-    commands.entity(entity).add_child(visual);
+            ChildOf(entity),
+        ));
+    });
 }
 
-fn draw_dummy_healthbar(
-    dummies: Query<(&Position, &Health), With<Dummy>>,
-    mut gizmos: Gizmos,
-) {
+fn draw_dummy_healthbar(dummies: Query<(&Position, &Health), With<Dummy>>, mut gizmos: Gizmos) {
     const BAR_WIDTH: f32 = 60.0;
     const BAR_HEIGHT: f32 = 10.0;
     const BAR_Y: f32 = 90.0;
@@ -84,7 +81,10 @@ fn draw_dummy_healthbar(
 fn spawn_dummy(mut commands: Commands) {
     commands.spawn((
         Dummy,
-        Health { current: 100.0, max: 100.0 },
+        Health {
+            current: 100.0,
+            max: 100.0,
+        },
         Position::from_xy(150.0, 0.0),
         RigidBody::Static,
         Collider::circle(25.0),

@@ -7121,7 +7121,7 @@ dependencies = [
  "lightyear",
  "physics",
  "protocol",
- "shared",
+ "scene",
 ]
 
 [[package]]
@@ -7579,6 +7579,7 @@ dependencies = [
  "lightyear",
  "physics",
  "protocol",
+ "scene",
  "serde",
 ]
 

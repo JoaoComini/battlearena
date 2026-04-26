@@ -1,12 +1,12 @@
-use inputs::{AbilityInput, Direction, Inputs, PlayerInput};
-use physics::PlayerPhysicsBundle;
-use protocol::*;
-use avian2d::prelude::{Position};
+use avian2d::prelude::Position;
 use bevy::prelude::*;
 use bevy::window::PrimaryWindow;
+use inputs::{AbilityInput, Direction, Inputs, PlayerInput};
 use lightyear::prelude::client::input::*;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::*;
+use physics::PlayerPhysicsBundle;
+use protocol::*;
 
 pub struct BattleArenaClientPlugin;
 
@@ -19,6 +19,18 @@ impl Plugin for BattleArenaClientPlugin {
         app.add_observer(handle_predicted_spawn);
         app.add_observer(handle_interpolated_spawn);
     }
+}
+
+fn log_rollback(manager: Query<&lightyear::prelude::PredictionManager>) {
+    if let Ok(m) = manager.single() {
+        if m.is_rollback() {
+            info!("Rollback triggered");
+        }
+    }
+}
+
+fn log_interpolated_despawn(trigger: On<Remove, Interpolated>) {
+    info!("Interpolated removed from {:?}", trigger.entity);
 }
 
 pub(crate) fn buffer_input(
@@ -70,24 +82,22 @@ pub(crate) fn buffer_input(
             slot1: mouse_button_input.pressed(MouseButton::Left),
             slot2: keypress.pressed(KeyCode::KeyE),
         };
-        action_state.0 = Inputs::PlayerInput(PlayerInput { movement: direction, abilities });
+        action_state.0 = Inputs::PlayerInput(PlayerInput {
+            movement: direction,
+            abilities,
+        });
     }
 }
 
 pub(crate) fn handle_predicted_spawn(
     trigger: On<Add, (PlayerId, Predicted)>,
-    mut query: Query<&mut PlayerColor, With<Predicted>>,
+    predicted: Query<(), (With<PlayerId>, With<Predicted>)>,
     mut commands: Commands,
 ) {
     let entity = trigger.entity;
-    let Ok(mut color) = query.get_mut(entity) else {
+    if predicted.get(entity).is_err() {
         return;
-    };
-    let hsva = Hsva {
-        saturation: 0.4,
-        ..Hsva::from(color.0)
-    };
-    color.0 = Color::from(hsva);
+    }
     commands.entity(entity).insert((
         PlayerPhysicsBundle::default(),
         InputMarker::<Inputs>::default(),
@@ -97,18 +107,13 @@ pub(crate) fn handle_predicted_spawn(
 
 pub(crate) fn handle_interpolated_spawn(
     trigger: On<Add, (PlayerId, Interpolated)>,
-    mut query: Query<&mut PlayerColor, With<Interpolated>>,
+    interpolated: Query<(), (With<PlayerId>, With<Interpolated>)>,
     mut commands: Commands,
 ) {
     let entity = trigger.entity;
-    let Ok(mut color) = query.get_mut(entity) else {
+    if interpolated.get(entity).is_err() {
         return;
-    };
-    let hsva = Hsva {
-        saturation: 0.1,
-        ..Hsva::from(color.0)
-    };
-    color.0 = Color::from(hsva);
+    }
     commands
         .entity(entity)
         .insert(PlayerPhysicsBundle::default());

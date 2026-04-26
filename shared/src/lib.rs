@@ -1,12 +1,14 @@
 pub mod dummy;
 
-use avian2d::prelude::*;
 use bevy::prelude::*;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
 use physics::PhysicsPlugin;
 use protocol::*;
+use scene::{LoadScene, ScenePlugin};
+
+use crate::dummy::DummyPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 60.0;
 pub const SERVER_PORT: u16 = 5888;
@@ -26,18 +28,6 @@ pub const SHARED_SETTINGS: SharedSettings = SharedSettings {
     private_key: [0; 32],
 };
 
-pub const PILLAR_OFFSET: f32 = 300.0;
-pub const PILLAR_RADIUS: f32 = 30.0;
-pub const PILLAR_HEIGHT: f32 = 200.0;
-pub const ARENA_SIZE: f32 = 800.0;
-pub const FLOOR_THICKNESS: f32 = 20.0;
-
-#[derive(Component)]
-pub struct Pillar;
-
-#[derive(Component)]
-pub struct Floor;
-
 pub struct SharedPlugin;
 
 impl Plugin for SharedPlugin {
@@ -45,24 +35,12 @@ impl Plugin for SharedPlugin {
         app.add_plugins(ProtocolPlugin);
         app.add_plugins(PhysicsPlugin);
         app.add_plugins(InputPlugin);
+        app.add_plugins(ScenePlugin);
+        // app.add_plugins(DummyPlugin);
         app.add_systems(Startup, spawn_scene);
     }
 }
 
 pub fn spawn_scene(mut commands: Commands) {
-    commands.spawn((Floor, Transform::from_xyz(0.0, 0.0, -FLOOR_THICKNESS * 0.5)));
-
-    for (x, y) in [
-        (PILLAR_OFFSET, PILLAR_OFFSET),
-        (-PILLAR_OFFSET, PILLAR_OFFSET),
-        (PILLAR_OFFSET, -PILLAR_OFFSET),
-        (-PILLAR_OFFSET, -PILLAR_OFFSET),
-    ] {
-        commands.spawn((
-            Pillar,
-            RigidBody::Static,
-            Collider::circle(PILLAR_RADIUS),
-            Position::from_xy(x, y),
-        ));
-    }
+    commands.spawn(LoadScene("assets/models/arena.scn".to_string()));
 }

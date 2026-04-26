@@ -26,9 +26,10 @@ pub(crate) fn hierarchy_panel(
 
             let mut spawn_child_of: Option<Entity> = None;
             let mut spawn_root = false;
+            let mut delete_entity: Option<Entity> = None;
 
             for entity in roots {
-                entity_tree(entity, &entities, ui, &mut selected, &mut spawn_child_of);
+                entity_tree(entity, &entities, ui, &mut selected, &mut spawn_child_of, &mut delete_entity);
             }
 
             let remaining = ui.allocate_response(ui.available_size(), egui::Sense::click());
@@ -52,6 +53,14 @@ pub(crate) fn hierarchy_panel(
                 commands.entity(root).add_child(child);
                 selected.0 = Some(child);
             }
+
+            if let Some(entity) = delete_entity {
+                if selected.0 == Some(entity) {
+                    selected.0 = None;
+                }
+                commands.entity(entity).despawn();
+                commands.entity(root).insert(crate::spawn::SceneDirty);
+            }
         });
     Ok(())
 }
@@ -62,6 +71,7 @@ fn entity_tree(
     ui: &mut egui::Ui,
     selected: &mut ResMut<SelectedEntity>,
     spawn_child_of: &mut Option<Entity>,
+    delete_entity: &mut Option<Entity>,
 ) {
     let Ok((_, name, children)) = entities.get(entity) else {
         return;
@@ -85,11 +95,11 @@ fn entity_tree(
                 if response.clicked() {
                     selected.0 = Some(entity);
                 }
-                context_menu(&response, entity, spawn_child_of);
+                context_menu(&response, entity, spawn_child_of, delete_entity);
             })
             .body(|ui| {
                 for child in &child_list {
-                    entity_tree(*child, entities, ui, selected, spawn_child_of);
+                    entity_tree(*child, entities, ui, selected, spawn_child_of, delete_entity);
                 }
             });
     } else {
@@ -97,14 +107,18 @@ fn entity_tree(
         if response.clicked() {
             selected.0 = Some(entity);
         }
-        context_menu(&response, entity, spawn_child_of);
+        context_menu(&response, entity, spawn_child_of, delete_entity);
     }
 }
 
-fn context_menu(response: &egui::Response, entity: Entity, spawn_child_of: &mut Option<Entity>) {
+fn context_menu(response: &egui::Response, entity: Entity, spawn_child_of: &mut Option<Entity>, delete_entity: &mut Option<Entity>) {
     response.context_menu(|ui| {
         if ui.button("Add Child Entity").clicked() {
             *spawn_child_of = Some(entity);
+            ui.close();
+        }
+        if ui.button("Delete Entity").clicked() {
+            *delete_entity = Some(entity);
             ui.close();
         }
     });

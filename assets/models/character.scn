@@ -1,0 +1,4 @@
+(
+    source: "assets/models/character.glb",
+    overrides: {},
+)

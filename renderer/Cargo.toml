@@ -14,9 +14,9 @@ bevy = { workspace = true }
 lightyear = { workspace = true }
 avian2d = { workspace = true }
 protocol = { workspace = true }
-shared = { workspace = true }
 abilities = { workspace = true }
 physics = { workspace = true }
+scene = { workspace = true }
 bevy-inspector-egui = { workspace = true, optional = true }
 
 [lints]

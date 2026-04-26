@@ -44,6 +44,7 @@ fn on_ability_hitbox_spawned(
         .insert((
             Replicate::to_clients(NetworkTarget::All),
             InterpolationTarget::to_clients(NetworkTarget::All),
+            DisableReplicateHierarchy,
             effect.to_debug_gizmo(),
         ));
 }

@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use inputs::Inputs;
 use lightyear::prelude::{input::native::ActionState, PredictionSystems};
 
-pub const PLAYER_SIZE: f32 = 50.0;
+pub const PLAYER_SIZE: f32 = 0.8;
 
 #[derive(Component, Default)]
 pub struct MoveAndSlideResult(pub Vec2, pub Vec2, pub f32);
@@ -162,7 +162,7 @@ pub fn apply_move_and_slide(
 }
 
 pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
-    const MOVE_SPEED: f32 = 200.0;
+    const MOVE_SPEED: f32 = 4.0;
     for (mut velocity, input) in &mut query {
         let Inputs::PlayerInput(player_input) = &input.0;
         let direction = &player_input.movement;
@@ -189,4 +189,3 @@ pub fn set_rotation(mut query: Query<(&mut Rotation, &ActionState<Inputs>)>) {
         *rotation = Rotation::radians(player_input.movement.angle);
     }
 }
-

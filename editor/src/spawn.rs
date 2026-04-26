@@ -1,7 +1,7 @@
 use avian2d::prelude::{Position, Rotation};
 use bevy::prelude::*;
 use import::ImportGltf;
-use scene::LoadScene;
+use scene::{LoadScene, SceneSourcePath};
 
 /// Marks the root entity of the active scene in the editor.
 #[derive(Component)]
@@ -38,7 +38,9 @@ fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
         if path.ends_with(".scn") {
             entity_cmds.insert((ScenePath(path.clone()), LoadScene(path)));
         } else {
-            entity_cmds.remove::<ScenePath>().insert(ImportGltf(path));
+            entity_cmds
+                .remove::<ScenePath>()
+                .insert((ImportGltf(path.clone()), SceneSourcePath(path)));
         }
     }
 }
