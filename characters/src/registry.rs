@@ -22,9 +22,9 @@ pub fn load_characters(
     mut registry: ResMut<CharacterRegistry>,
 ) {
     for path in [
-        "abilities://characters/comini.character.ron",
-        "abilities://characters/kaps.character.ron",
-        "abilities://characters/dummy.character.ron",
+        "characters://comini.character.ron",
+        "characters://kaps.character.ron",
+        "characters://dummy.character.ron",
     ] {
         let handle: Handle<CharacterDef> = asset_server.load(path);
         let key = path
