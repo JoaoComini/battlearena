@@ -1,4 +1,5 @@
 pub mod client;
+pub mod debug;
 pub mod registry;
 pub mod server;
 pub mod systems;

@@ -99,7 +99,6 @@ fn do_spawn_dummy(
         RigidBody::Static,
         Collider::circle(0.4),
         Replicate::to_clients(NetworkTarget::All),
-        // InterpolationTarget::to_clients(NetworkTarget::All),
     ));
 }
 

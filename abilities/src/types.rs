@@ -97,6 +97,17 @@ pub struct MeleeHitbox {
 }
 
 #[derive(Component, Debug)]
+pub struct HitMarker {
+    pub timer: Timer,
+}
+
+impl HitMarker {
+    pub fn new() -> Self {
+        Self { timer: Timer::from_seconds(0.4, TimerMode::Once) }
+    }
+}
+
+#[derive(Component, Debug)]
 pub struct ProjectileHitbox {
     pub caster: Entity,
     pub damage: f32,

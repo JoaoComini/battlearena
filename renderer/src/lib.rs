@@ -18,6 +18,7 @@ pub struct BattleArenaRendererPlugin;
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(physics::debug::PhysicsDebugRenderPlugin);
+        app.add_plugins(abilities::debug::AbilityDebugPlugin);
         app.add_plugins(CharacterAnimationPlugin);
         app.add_observer(on_player_spawn);
         app.add_systems(Startup, init);
