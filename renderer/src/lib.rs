@@ -11,7 +11,7 @@ use protocol::*;
 use crate::animation::CharacterAnimationPlugin;
 
 #[derive(Component)]
-struct CharacterVisual;
+pub struct CharacterVisual(pub String);
 
 pub struct BattleArenaRendererPlugin;
 
@@ -57,7 +57,7 @@ fn on_player_spawn(trigger: On<Add, PlayerId>, mut commands: Commands, asset_ser
                 bevy::gltf::GltfAssetLabel::Scene(0)
                     .from_asset("assets/models/character.glb"),
             )),
-            CharacterVisual,
+            CharacterVisual("assets/models/character.glb".to_string()),
             ChildOf(entity),
         ))
         .id();

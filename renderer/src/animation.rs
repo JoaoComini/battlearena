@@ -1,7 +1,10 @@
 use avian2d::prelude::{LinearVelocity, Rotation};
-use bevy::prelude::*;
 use bevy::scene::SceneInstanceReady;
+use bevy::{animation::RepeatAnimation, asset::AssetPath, prelude::*};
 use protocol::PlayerId;
+use std::collections::HashMap;
+
+use crate::CharacterVisual;
 
 pub struct CharacterAnimationPlugin;
 
@@ -12,22 +15,76 @@ impl Plugin for CharacterAnimationPlugin {
     }
 }
 
-#[derive(Component)]
-pub struct CharacterAnimationController {
-    idle_node: AnimationNodeIndex,
-    forward_node: AnimationNodeIndex,
-    back_node: AnimationNodeIndex,
-    left_node: AnimationNodeIndex,
-    right_node: AnimationNodeIndex,
-    forward_left_node: AnimationNodeIndex,
-    forward_right_node: AnimationNodeIndex,
-    back_left_node: AnimationNodeIndex,
-    back_right_node: AnimationNodeIndex,
+// ── Animation name enum ───────────────────────────────────────────────────────
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy, Debug)]
+pub enum AnimationName {
+    Idle,
+    RunForward,
+    RunBack,
+    RunLeft,
+    RunRight,
+    RunForwardLeft,
+    RunForwardRight,
+    RunBackLeft,
+    RunBackRight,
 }
+
+impl AnimationName {
+    pub fn repeat(&self) -> RepeatAnimation {
+        RepeatAnimation::Forever
+    }
+}
+
+// ── Animation path table ──────────────────────────────────────────────────────
+
+struct CharacterAnimationPaths {
+    idle: AssetPath<'static>,
+    run_forward: AssetPath<'static>,
+    run_back: AssetPath<'static>,
+    run_left: AssetPath<'static>,
+    run_right: AssetPath<'static>,
+    run_forward_left: AssetPath<'static>,
+    run_forward_right: AssetPath<'static>,
+    run_back_left: AssetPath<'static>,
+    run_back_right: AssetPath<'static>,
+}
+
+impl CharacterAnimationPaths {
+    fn new(glb: &str) -> Self {
+        let anim = |i: usize| GltfAssetLabel::Animation(i).from_asset(glb.to_string());
+        Self {
+            idle: anim(0),
+            run_forward: anim(4),
+            run_back: anim(1),
+            run_left: anim(7),
+            run_right: anim(8),
+            run_forward_left: anim(5),
+            run_forward_right: anim(6),
+            run_back_left: anim(2),
+            run_back_right: anim(3),
+        }
+    }
+}
+
+// ── Animation map ─────────────────────────────────────────────────────────────
+
+#[derive(Component)]
+pub struct CharacterAnimations {
+    nodes: HashMap<AnimationName, AnimationNodeIndex>,
+}
+
+impl CharacterAnimations {
+    pub fn get(&self, name: AnimationName) -> AnimationNodeIndex {
+        *self.nodes.get(&name).unwrap()
+    }
+}
+
+// ── Setup observer ────────────────────────────────────────────────────────────
 
 fn on_scene_ready(
     trigger: On<SceneInstanceReady>,
-    character_visuals: Query<(), With<crate::CharacterVisual>>,
+    visuals: Query<&CharacterVisual>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
@@ -36,94 +93,68 @@ fn on_scene_ready(
 ) {
     let root = trigger.entity;
 
-    if character_visuals.get(root).is_err() {
+    let Ok(visual) = visuals.get(root) else {
         return;
-    }
+    };
+    let glb = &visual.0;
 
     let Some(player_entity) = find_descendant(root, &children, &animation_players) else {
         warn!("No AnimationPlayer found in character scene");
         return;
     };
 
-    let glb = "assets/models/character.glb";
-
+    let paths = CharacterAnimationPaths::new(glb);
     let mut graph = AnimationGraph::new();
 
-    let idle_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation0")), // Idle
-        1.0,
-        graph.root,
-    );
+    let graph_root = graph.root;
+    let run_blend = graph.add_blend(1.0, graph_root);
 
-    // All 8 directional clips share one blend parent so their weights are
-    // automatically normalized relative to each other.
-    let run_blend_node = graph.add_blend(0.0, graph.root);
+    let mut nodes = HashMap::default();
 
-    let forward_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation4")), // Running_F
-        1.0,
-        run_blend_node,
+    let mut add = |name: AnimationName, path: &AssetPath<'static>, parent| {
+        let clip = asset_server.load(path.clone());
+        let ix = graph.add_clip(clip, 1.0, parent);
+        nodes.insert(name, ix);
+    };
+
+    add(AnimationName::Idle, &paths.idle, graph_root);
+    add(AnimationName::RunForward, &paths.run_forward, run_blend);
+    add(AnimationName::RunBack, &paths.run_back, run_blend);
+    add(AnimationName::RunLeft, &paths.run_left, run_blend);
+    add(AnimationName::RunRight, &paths.run_right, run_blend);
+    add(
+        AnimationName::RunForwardLeft,
+        &paths.run_forward_left,
+        run_blend,
     );
-    let back_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation1")), // Running_B
-        1.0,
-        run_blend_node,
+    add(
+        AnimationName::RunForwardRight,
+        &paths.run_forward_right,
+        run_blend,
     );
-    let left_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation7")), // Running_L
-        1.0,
-        run_blend_node,
-    );
-    let right_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation8")), // Running_R
-        1.0,
-        run_blend_node,
-    );
-    let forward_left_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation5")), // Running_FL
-        1.0,
-        run_blend_node,
-    );
-    let forward_right_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation6")), // Running_FR
-        1.0,
-        run_blend_node,
-    );
-    let back_left_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation2")), // Running_BL
-        1.0,
-        run_blend_node,
-    );
-    let back_right_node = graph.add_clip(
-        asset_server.load(format!("{glb}#Animation3")), // Running_BR
-        1.0,
-        run_blend_node,
+    add(AnimationName::RunBackLeft, &paths.run_back_left, run_blend);
+    add(
+        AnimationName::RunBackRight,
+        &paths.run_back_right,
+        run_blend,
     );
 
     let graph_handle = graphs.add(graph);
 
     commands.entity(player_entity).insert((
         AnimationGraphHandle(graph_handle),
-        CharacterAnimationController {
-            idle_node,
-            forward_node,
-            back_node,
-            left_node,
-            right_node,
-            forward_left_node,
-            forward_right_node,
-            back_left_node,
-            back_right_node,
-        },
+        CharacterAnimations { nodes },
     ));
 }
 
+// ── Drive system ──────────────────────────────────────────────────────────────
+
 fn drive_animations(
-    mut controllers: Query<(Entity, &mut AnimationPlayer, &CharacterAnimationController)>,
+    mut controllers: Query<(Entity, &mut AnimationPlayer, &CharacterAnimations)>,
     parents: Query<&ChildOf>,
     player_query: Query<(&LinearVelocity, &Rotation), With<PlayerId>>,
 ) {
-    for (ctrl_entity, mut player, ctrl) in &mut controllers {
+    for (ctrl_entity, mut player, anims) in &mut controllers {
         let Some((velocity, rotation)) = find_ancestor(ctrl_entity, &parents, &player_query) else {
             continue;
         };
@@ -131,56 +162,53 @@ fn drive_animations(
         let speed = velocity.0.length();
 
         if speed < 0.1 {
-            play_idle(&mut player, ctrl);
+            play_idle(&mut player, anims);
         } else {
-            play_directional(&mut player, ctrl, velocity, rotation);
+            play_directional(&mut player, anims, velocity, rotation);
         }
     }
 }
 
-fn play_idle(player: &mut AnimationPlayer, ctrl: &CharacterAnimationController) {
-    player.play(ctrl.idle_node).set_weight(1.0).repeat();
+fn play_idle(player: &mut AnimationPlayer, anims: &CharacterAnimations) {
+    player
+        .play(anims.get(AnimationName::Idle))
+        .set_weight(1.0)
+        .repeat();
 
-    for &node in directional_nodes(ctrl).iter() {
-        player.play(node).set_weight(0.0).repeat();
+    for name in directional_names() {
+        player.play(anims.get(name)).set_weight(0.0).repeat();
     }
 }
 
 fn play_directional(
     player: &mut AnimationPlayer,
-    ctrl: &CharacterAnimationController,
+    anims: &CharacterAnimations,
     velocity: &LinearVelocity,
     rotation: &Rotation,
 ) {
-    player.play(ctrl.idle_node).set_weight(0.0).repeat();
+    player
+        .play(anims.get(AnimationName::Idle))
+        .set_weight(0.0)
+        .repeat();
 
-    // The facing angle has - π/2 baked in (mouse above player → angle 0,
-    // model faces screen-up = 2D +Y). Reconstruct the facing unit vector
-    // directly from the angle to avoid reference-frame mismatches.
-    // In 2D physics space: +X = right, +Y = up/forward on screen.
-    // from_rotation_y(angle) rotates in XZ, mapping 2D +Y → 3D -Z.
-    // The 2D facing direction corresponding to a given rotation angle is:
-    //   forward_2d = (sin(angle), cos(angle))  [because angle=0 → facing +Y]
     let facing = rotation.as_radians();
-    let forward = Vec2::new(-facing.sin(), facing.cos()); // points toward mouse
-    let right = Vec2::new(forward.y, -forward.x); // 90° CW from forward
+    let forward = Vec2::new(-facing.sin(), facing.cos());
+    let right = Vec2::new(forward.y, -forward.x);
 
     let vel_dir = velocity.0.normalize_or_zero();
-    let cos_a = vel_dir.dot(forward); // > 0 = moving toward mouse
-    let sin_a = vel_dir.dot(right); // > 0 = moving right relative to facing
-                                    // cos_a > 0 = forward, sin_a > 0 = right (in standard math convention)
+    let cos_a = vel_dir.dot(forward);
+    let sin_a = vel_dir.dot(right);
 
-    // Unit vectors for each of the 8 directions in (cos, sin) = (fwd, right) space
     let k = std::f32::consts::FRAC_1_SQRT_2;
     let dirs: [(f32, f32); 8] = [
-        (1.0, 0.0),  // Forward
-        (-1.0, 0.0), // Back
-        (0.0, -1.0), // Left
-        (0.0, 1.0),  // Right
-        (k, -k),     // Forward-Left
-        (k, k),      // Forward-Right
-        (-k, -k),    // Back-Left
-        (-k, k),     // Back-Right
+        (1.0, 0.0),
+        (-1.0, 0.0),
+        (0.0, -1.0),
+        (0.0, 1.0),
+        (k, -k),
+        (k, k),
+        (-k, -k),
+        (-k, k),
     ];
 
     let mut weights = [0.0f32; 8];
@@ -194,23 +222,25 @@ fn play_directional(
         }
     }
 
-    for (&node, &w) in directional_nodes(ctrl).iter().zip(weights.iter()) {
-        player.play(node).set_weight(w).repeat();
+    for (name, &w) in directional_names().iter().zip(weights.iter()) {
+        player.play(anims.get(*name)).set_weight(w).repeat();
     }
 }
 
-fn directional_nodes(ctrl: &CharacterAnimationController) -> [AnimationNodeIndex; 8] {
+fn directional_names() -> [AnimationName; 8] {
     [
-        ctrl.forward_node,
-        ctrl.back_node,
-        ctrl.left_node,
-        ctrl.right_node,
-        ctrl.forward_left_node,
-        ctrl.forward_right_node,
-        ctrl.back_left_node,
-        ctrl.back_right_node,
+        AnimationName::RunForward,
+        AnimationName::RunBack,
+        AnimationName::RunLeft,
+        AnimationName::RunRight,
+        AnimationName::RunForwardLeft,
+        AnimationName::RunForwardRight,
+        AnimationName::RunBackLeft,
+        AnimationName::RunBackRight,
     ]
 }
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn find_descendant<T: Component>(
     root: Entity,
