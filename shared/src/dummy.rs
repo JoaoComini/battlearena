@@ -97,9 +97,9 @@ fn do_spawn_dummy(
         Health { current: max_health, max: max_health },
         Position::from_xy(10.0, 0.0),
         RigidBody::Static,
-        Collider::circle(25.0),
+        Collider::circle(0.8),
         Replicate::to_clients(NetworkTarget::All),
-        InterpolationTarget::to_clients(NetworkTarget::All),
+        // InterpolationTarget::to_clients(NetworkTarget::All),
     ));
 }
 
