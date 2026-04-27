@@ -7,7 +7,7 @@ use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{server::AbilityServerPlugin, AbilityPlugin};
+use abilities::{server::AbilityServerPlugin};
 use setup::{start, BattleArenaServer, ServerTransports};
 use systems::BattleArenaServerPlugin;
 
