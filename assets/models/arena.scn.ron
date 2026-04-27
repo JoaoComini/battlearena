@@ -1,0 +1,456 @@
+(
+    resources: {},
+    entities: {
+        4294967246: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967255),
+                "bevy_ecs::name::Name": "shape-cube.002.colormap.004",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material1"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh8/Primitive0"),
+            },
+        ),
+        4294967247: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967256),
+                "bevy_ecs::name::Name": "shape-cube.001.colormap.004",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material1"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh7/Primitive0"),
+            },
+        ),
+        4294967248: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967257),
+                "bevy_ecs::name::Name": "shape-cylinder.005.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh6/Primitive0"),
+            },
+        ),
+        4294967249: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967258),
+                "bevy_ecs::name::Name": "shape-cylinder.004.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh5/Primitive0"),
+            },
+        ),
+        4294967250: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967259),
+                "bevy_ecs::name::Name": "shape-cylinder.003.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh4/Primitive0"),
+            },
+        ),
+        4294967251: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
+                    radius: 0.7,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((-7.854732, 9.795488)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967260),
+                "bevy_ecs::name::Name": "shape-cylinder.002.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh3/Primitive0"),
+            },
+        ),
+        4294967252: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967261),
+                "bevy_ecs::name::Name": "shape-cylinder.001.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh2/Primitive0"),
+            },
+        ),
+        4294967253: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967262),
+                "bevy_ecs::name::Name": "shape-cube.colormap.004",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material1"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh1/Primitive0"),
+            },
+        ),
+        4294967254: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967263),
+                "bevy_ecs::name::Name": "shape-cylinder.colormap",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+                "scene::components::MaterialRef": ("assets/models/arena.glb#Material0"),
+                "scene::components::MeshRef": ("assets/models/arena.glb#Mesh0/Primitive0"),
+            },
+        ),
+        4294967255: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967246,
+                    4294967271,
+                ]),
+                "bevy_ecs::name::Name": "shape-cube.002",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (11.647381, 0.0, -5.860294),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967256: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967247,
+                    4294967267,
+                ]),
+                "bevy_ecs::name::Name": "shape-cube.001",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (5.750722, 0.0, 0.84068507),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967257: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967248,
+                    4294967266,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder.005",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (6.0697384, 0.0, 7.822371),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967258: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967249,
+                    4294967265,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder.004",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-10.323263, 0.0, 6.618441),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967259: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967250,
+                    4294967270,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder.003",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (7.8282795, 0.0, -10.439983),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967260: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967251,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder.002",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-7.854732, 0.0, -9.795488),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967261: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967252,
+                    4294967269,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder.001",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-2.7032971, 0.0, -1.0676348),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967262: (
+            components: {
+                "avian2d::physics_transform::transform::Position": ((-3.042334, -11.597042)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967253,
+                    4294967268,
+                ]),
+                "bevy_ecs::name::Name": "shape-cube",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-3.042334, 0.0, 11.597042),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967263: (
+            components: {
+                "avian2d::physics_transform::transform::Position": ((-0.7372494, -0.2461924)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::ChildOf": (4294967264),
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967254,
+                ]),
+                "bevy_ecs::name::Name": "shape-cylinder",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (-0.7372494, -1.0, 0.2461924),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967264: (
+            components: {
+                "bevy_camera::visibility::Visibility": Inherited,
+                "bevy_ecs::hierarchy::Children": ([
+                    4294967263,
+                    4294967262,
+                    4294967261,
+                    4294967260,
+                    4294967259,
+                    4294967258,
+                    4294967257,
+                    4294967256,
+                    4294967255,
+                ]),
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967265: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
+                    radius: 0.7,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((-10.323263, -6.618441)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967258),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967266: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
+                    radius: 0.7,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((6.0697384, -7.822371)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967257),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967267: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+                    x_length: 5.5,
+                    y_length: 1.0,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((5.750722, -0.84068507)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967256),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967268: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+                    x_length: 5.5,
+                    y_length: 1.0,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((-3.042334, -11.597042)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 0.8571673,
+                    sin: 0.5150381,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967262),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.26723838, 0.0, 0.96363044),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967269: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
+                    radius: 0.7,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((-2.7032971, 1.0676348)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967261),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967270: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Circle(
+                    radius: 0.7,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((7.8282795, 10.439983)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 1.0,
+                    sin: 0.0,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967259),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (0.0, 0.0, 0.0, 1.0),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+        4294967271: (
+            components: {
+                "avian2d::collision::collider::constructor::ColliderConstructor": Rectangle(
+                    x_length: 5.5,
+                    y_length: 1.0,
+                ),
+                "avian2d::dynamics::rigid_body::RigidBody": Static,
+                "avian2d::physics_transform::transform::Position": ((11.647381, 5.860294)),
+                "avian2d::physics_transform::transform::Rotation": (
+                    cos: 0.8829475,
+                    sin: -0.4694717,
+                ),
+                "bevy_ecs::hierarchy::ChildOf": (4294967255),
+                "bevy_ecs::name::Name": "Entity",
+                "bevy_transform::components::transform::Transform": (
+                    translation: (0.0, 0.0, 0.0),
+                    rotation: (-0.0, -0.2419219, 0.0, 0.9702957),
+                    scale: (1.0, 1.0, 1.0),
+                ),
+            },
+        ),
+    },
+)

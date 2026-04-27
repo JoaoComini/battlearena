@@ -1,7 +1,6 @@
 use avian2d::prelude::{Position, Rotation};
 use bevy::prelude::*;
 use import::ImportGltf;
-use scene::{LoadScene, SceneSourcePath};
 
 /// Marks the root entity of the active scene in the editor.
 #[derive(Component)]
@@ -16,7 +15,7 @@ pub struct SceneDirty;
 pub struct ScenePath(pub String);
 
 /// Place this component on an entity to open a scene file.
-/// Dispatches to `LoadScene` for `.scn` files or `ImportGltf` for GLTF.
+/// Dispatches to `DynamicSceneRoot` for `.scn.ron` files or `ImportGltf` for GLTF.
 #[derive(Component)]
 pub struct OpenScene(pub String);
 
@@ -30,17 +29,24 @@ impl Plugin for SpawnPlugin {
     }
 }
 
-fn open_scene(mut commands: Commands, query: Query<(Entity, &OpenScene)>) {
+fn open_scene(
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    query: Query<(Entity, &OpenScene)>,
+) {
     for (entity, open) in &query {
         let path = open.0.clone();
         let mut entity_cmds = commands.entity(entity);
         entity_cmds.remove::<OpenScene>();
-        if path.ends_with(".scn") {
-            entity_cmds.insert((ScenePath(path.clone()), LoadScene(path)));
+        if path.ends_with(".scn.ron") {
+            entity_cmds.insert((
+                ScenePath(path.clone()),
+                DynamicSceneRoot(asset_server.load(path)),
+            ));
         } else {
             entity_cmds
                 .remove::<ScenePath>()
-                .insert((ImportGltf(path.clone()), SceneSourcePath(path)));
+                .insert(ImportGltf(path));
         }
     }
 }

@@ -7,7 +7,6 @@ pub mod animation;
 
 use bevy::{color::palettes::css::BLUE, prelude::*};
 use protocol::*;
-use scene::LoadScene;
 
 use crate::animation::CharacterAnimationPlugin;
 
@@ -47,14 +46,17 @@ fn init(mut commands: Commands) {
     ));
 }
 
-fn on_player_spawn(trigger: On<Add, PlayerId>, mut commands: Commands) {
+fn on_player_spawn(trigger: On<Add, PlayerId>, mut commands: Commands, asset_server: Res<AssetServer>) {
     let entity = trigger.entity;
 
     let visual = commands
         .spawn((
             Transform::default(),
             Visibility::default(),
-            LoadScene("assets/models/character.scn".to_string()),
+            SceneRoot(asset_server.load(
+                bevy::gltf::GltfAssetLabel::Scene(0)
+                    .from_asset("assets/models/character.glb"),
+            )),
             CharacterVisual,
             ChildOf(entity),
         ))

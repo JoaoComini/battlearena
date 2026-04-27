@@ -6,7 +6,7 @@ use core::time::Duration;
 use inputs::InputPlugin;
 use physics::PhysicsPlugin;
 use protocol::*;
-use scene::{LoadScene, ScenePlugin};
+use scene::ScenePlugin;
 
 use crate::dummy::DummyPlugin;
 
@@ -41,6 +41,6 @@ impl Plugin for SharedPlugin {
     }
 }
 
-pub fn spawn_scene(mut commands: Commands) {
-    commands.spawn(LoadScene("assets/models/arena.scn".to_string()));
+pub fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.spawn(DynamicSceneRoot(asset_server.load("assets/models/arena.scn.ron")));
 }

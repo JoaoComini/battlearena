@@ -7,9 +7,7 @@ use scene::save;
 use crate::file_dialog::{open_file_dialog, save_file_dialog, FilePicked, SaveFilePicked};
 use crate::hierarchy::hierarchy_panel;
 use crate::selection::SelectedEntity;
-use crate::spawn::{
-    asset_fs_path, fs_to_asset_path, ActiveSceneRoot, OpenScene, SceneDirty, ScenePath,
-};
+use crate::spawn::{asset_fs_path, fs_to_asset_path, ActiveSceneRoot, OpenScene, SceneDirty, ScenePath};
 
 pub struct UiPlugin;
 
@@ -36,7 +34,7 @@ fn toolbar(
         egui::MenuBar::new().ui(ui, |ui| {
             ui.menu_button("File", |ui| {
                 if ui.button("Open Scene").clicked() {
-                    open_file_dialog(&mut commands, &[("Scene files", &["scn", "gltf", "glb"])]);
+                    open_file_dialog(&mut commands, &[("Scene files", &["scn.ron", "gltf", "glb"])]);
                     ui.close();
                 }
                 let save_label = if dirty { "Save Scene *" } else { "Save Scene" };
@@ -45,7 +43,7 @@ fn toolbar(
                     ui.close();
                 }
                 if ui.button("Save Scene As...").clicked() {
-                    save_file_dialog(&mut commands, &[("Scene files", &["scn"])]);
+                    save_file_dialog(&mut commands, &[("Scene files", &["scn.ron"])]);
                     ui.close();
                 }
             });
@@ -88,7 +86,7 @@ fn on_save_file_picked(
     mut commands: Commands,
     scene_root: Query<Entity, With<ActiveSceneRoot>>,
 ) {
-    let path = trigger.0.with_extension("scn");
+    let path = trigger.0.with_extension("scn.ron");
     let Some(asset_path) = fs_to_asset_path(&path) else {
         error!("Save path is outside the assets folder: {:?}", path);
         return;
@@ -356,7 +354,7 @@ fn save_or_save_as_system(world: &mut World) {
         save_scene(world);
     } else {
         let mut commands = world.commands();
-        save_file_dialog(&mut commands, &[("Scene files", &["scn"])]);
+        save_file_dialog(&mut commands, &[("Scene files", &["scn.ron"])]);
     }
 }
 
@@ -373,7 +371,7 @@ fn save_scene(world: &mut World) {
     let scene_path = world.get::<ScenePath>(root).map(|s| s.0.clone());
 
     let Some(scene_path) = scene_path else {
-        error!("No .scn path set, use Save As to choose a destination");
+        error!("No .scn.ron path set, use Save As to choose a destination");
         return;
     };
 

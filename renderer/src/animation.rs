@@ -2,7 +2,6 @@ use avian2d::prelude::{LinearVelocity, Rotation};
 use bevy::prelude::*;
 use bevy::scene::SceneInstanceReady;
 use protocol::PlayerId;
-use scene::SceneSourcePath;
 
 pub struct CharacterAnimationPlugin;
 
@@ -28,7 +27,7 @@ pub struct CharacterAnimationController {
 
 fn on_scene_ready(
     trigger: On<SceneInstanceReady>,
-    scene_roots: Query<&SceneSourcePath>,
+    character_visuals: Query<(), With<crate::CharacterVisual>>,
     mut commands: Commands,
     asset_server: Res<AssetServer>,
     mut graphs: ResMut<Assets<AnimationGraph>>,
@@ -37,10 +36,7 @@ fn on_scene_ready(
 ) {
     let root = trigger.entity;
 
-    let Ok(source) = scene_roots.get(root) else {
-        return;
-    };
-    if !source.0.contains("character") {
+    if character_visuals.get(root).is_err() {
         return;
     }
 

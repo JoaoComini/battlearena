@@ -1,24 +1,15 @@
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
 use bevy::prelude::*;
+use serde::{Deserialize, Serialize};
 
-/// Scene format: source GLB path + per-node component overrides.
-/// Outer key: node name. Inner key: full type path. Value: component data.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OverrideScene {
-    pub source: String,
-    pub overrides: HashMap<String, HashMap<String, ron::Value>>,
-}
+/// Asset path to a mesh within a GLTF file (e.g. `"assets/models/arena.glb#Mesh0/Primitive0"`).
+/// Stored as plain data so it round-trips through Bevy's DynamicScene pipeline.
+/// `resolve_mesh_refs` converts this into a `Mesh3d` handle at runtime.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug)]
+#[reflect(Component, Serialize, Deserialize)]
+pub struct MeshRef(pub String);
 
-
-/// Place this component on an entity to load an override-based `.scn` file.
-#[derive(Component)]
-pub struct LoadScene(pub String);
-
-/// Holds pending overrides to be applied once `SceneInstanceReady` fires.
-#[derive(Component)]
-pub struct PendingOverrides(pub HashMap<String, HashMap<String, ron::Value>>);
-
-/// Tracks the source GLB asset path for a loaded scene root.
-#[derive(Component)]
-pub struct SceneSourcePath(pub String);
+/// Asset path to a material within a GLTF file (e.g. `"assets/models/arena.glb#Material0"`).
+/// `resolve_material_refs` converts this into a `MeshMaterial3d` handle at runtime.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug)]
+#[reflect(Component, Serialize, Deserialize)]
+pub struct MaterialRef(pub String);
