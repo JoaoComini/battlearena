@@ -95,7 +95,7 @@ fn do_spawn_dummy(
         Dummy,
         CharacterType("dummy".to_string()),
         Health { current: max_health, max: max_health },
-        Position::from_xy(150.0, 0.0),
+        Position::from_xy(10.0, 0.0),
         RigidBody::Static,
         Collider::circle(25.0),
         Replicate::to_clients(NetworkTarget::All),

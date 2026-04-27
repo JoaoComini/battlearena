@@ -5,6 +5,7 @@ use lightyear::prelude::input::native::ActionState;
 use crate::registry::AbilityRegistry;
 use crate::systems::{
     apply_hitbox_damage, apply_projectile_damage, move_projectiles, spawn_hitbox, tick_cooldowns,
+    tick_projectile_collision,
 };
 use crate::types::{AbilityCast, AbilityDef, AbilityLoadout};
 use crate::AbilitySharedPlugin;
@@ -21,7 +22,7 @@ impl Plugin for AbilityServerPlugin {
                 process_ability_inputs,
                 move_projectiles,
                 apply_hitbox_damage,
-                apply_projectile_damage,
+                apply_projectile_damage.after(tick_projectile_collision),
             )
                 .chain(),
         );

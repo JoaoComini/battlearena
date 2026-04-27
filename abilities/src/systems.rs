@@ -129,10 +129,11 @@ pub fn apply_hitbox_damage(
     }
 }
 
-pub fn apply_projectile_damage(
+/// Detects projectile collisions, records hits, and despawns on first contact.
+/// Runs on both client and server.
+pub fn tick_projectile_collision(
     mut projectiles: Query<(Entity, &mut ProjectileHitbox, &Collider, &Position)>,
     spatial_query: SpatialQuery,
-    mut health_query: Query<&mut Health>,
     mut commands: Commands,
 ) {
     for (entity, mut proj, collider, position) in &mut projectiles {
@@ -147,13 +148,25 @@ pub fn apply_projectile_damage(
 
         for hit in hits {
             if !proj.already_hit.contains(&hit) {
-                if let Ok(mut health) = health_query.get_mut(hit) {
-                    health.current -= proj.damage;
-                }
                 proj.already_hit.push(hit);
                 commands.entity(entity).despawn();
                 break;
             }
         }
+    }
+}
+
+/// Applies damage from projectile hits. Runs on server only.
+pub fn apply_projectile_damage(
+    mut projectiles: Query<(Entity, &mut ProjectileHitbox)>,
+    mut health_query: Query<&mut Health>,
+) {
+    for (_entity, mut proj) in &mut projectiles {
+        for &hit in &proj.already_hit {
+            if let Ok(mut health) = health_query.get_mut(hit) {
+                health.current -= proj.damage;
+            }
+        }
+        proj.already_hit.clear();
     }
 }

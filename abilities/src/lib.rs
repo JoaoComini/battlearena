@@ -10,7 +10,7 @@ use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use crate::systems::tick_melee_lifetime;
+use crate::systems::{tick_melee_lifetime, tick_projectile_collision};
 use crate::types::{AbilityCast};
 
 pub struct AbilitySharedPlugin;
@@ -21,7 +21,7 @@ impl Plugin for AbilitySharedPlugin {
             .register_asset_loader(RonAbilityLoader)
             .init_resource::<AbilityRegistry>()
             .add_systems(Startup, load_abilities)
-            .add_systems(FixedUpdate, tick_melee_lifetime);
+            .add_systems(FixedUpdate, (tick_melee_lifetime, tick_projectile_collision).chain());
 
         app.register_component::<AbilityLoadout>();
         app.register_component::<AbilityEffect>();

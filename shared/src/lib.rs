@@ -37,7 +37,7 @@ impl Plugin for SharedPlugin {
         app.add_plugins(PhysicsPlugin);
         app.add_plugins(InputPlugin);
         app.add_plugins(ScenePlugin);
-        // app.add_plugins(DummyPlugin);
+        app.add_plugins(DummyPlugin);
         app.add_plugins(CharactersPlugin);
         app.add_systems(Startup, spawn_scene);
     }
