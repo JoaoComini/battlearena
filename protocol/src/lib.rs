@@ -45,15 +45,8 @@ fn lerp_health(start: Health, end: Health, t: f32) -> Health {
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct CharacterType(pub String);
 
-// Messages
-#[derive(Serialize, Deserialize, Clone, Debug)]
-pub struct UseAbility {
-    pub slot: usize,
-}
-
 // Channels
 pub struct Channel1;
-pub struct AbilityChannel;
 
 // Protocol
 #[derive(Clone)]
@@ -88,14 +81,5 @@ impl Plugin for ProtocolPlugin {
             ..default()
         })
         .add_direction(NetworkDirection::ServerToClient);
-
-        app.add_channel::<AbilityChannel>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-            ..default()
-        })
-        .add_direction(NetworkDirection::ClientToServer);
-
-        app.register_message::<UseAbility>()
-            .add_direction(NetworkDirection::ClientToServer);
     }
 }

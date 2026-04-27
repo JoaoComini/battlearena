@@ -1,7 +1,7 @@
-use avian2d::prelude::{Collider, Position, SpatialQuery, SpatialQueryFilter};
+use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use protocol::Health;
-use crate::types::{AbilityLoadout, MeleeHitbox, ProjectileHitbox};
+use crate::types::{AbilityCast, AbilityDef, AbilityEffect, AbilityLoadout, HitboxCaster, MeleeHitbox, ProjectileHitbox};
 
 pub fn tick_cooldowns(mut query: Query<&mut AbilityLoadout>, time: Res<Time>) {
     for mut loadout in &mut query {
@@ -23,6 +23,57 @@ pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option
         points.push(Vec2::from_angle(a) * range);
     }
     Collider::convex_hull(points)
+}
+
+/// Spawns a hitbox entity for the given cast. Used by both server (authoritative) and client (local simulation).
+pub fn spawn_hitbox(caster: Entity, cast: &AbilityCast, def: &AbilityDef, commands: &mut Commands) {
+    let origin = cast.origin;
+    let facing_rad = cast.facing_rad;
+
+    match def.effect {
+        AbilityEffect::MeleeHit { range, angle_deg, damage, lifetime_frames } => {
+            let Some(collider) = pie_slice_collider(range, angle_deg, facing_rad) else {
+                return;
+            };
+            commands.spawn((
+                HitboxCaster(caster),
+                MeleeHitbox {
+                    caster,
+                    damage,
+                    range,
+                    angle_deg,
+                    lifetime_frames,
+                    origin,
+                    facing_rad,
+                    already_hit: Vec::new(),
+                },
+                def.effect.clone(),
+                Position(origin),
+                Rotation::radians(facing_rad),
+                collider,
+            ));
+        }
+        AbilityEffect::Projectile { speed, size, damage, max_range } => {
+            let direction = Vec2::from_angle(facing_rad + std::f32::consts::FRAC_PI_2);
+            commands.spawn((
+                HitboxCaster(caster),
+                ProjectileHitbox {
+                    caster,
+                    damage,
+                    speed,
+                    size,
+                    max_range,
+                    distance_traveled: 0.0,
+                    direction,
+                    already_hit: Vec::new(),
+                },
+                def.effect.clone(),
+                Position(origin),
+                Rotation::radians(facing_rad),
+                Collider::circle(size),
+            ));
+        }
+    }
 }
 
 pub fn move_projectiles(

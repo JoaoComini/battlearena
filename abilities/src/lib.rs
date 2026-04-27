@@ -10,10 +10,12 @@ use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 use lightyear::prelude::*;
+use crate::registry::{load_abilities, AbilityRegistry};
+use crate::types::{AbilityCast, AbilityDef, AbilityEffect, AbilityLoadout};
 
-pub struct AbilityPlugin;
+pub struct AbilitySharedPlugin;
 
-impl Plugin for AbilityPlugin {
+impl Plugin for AbilitySharedPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<AbilityDef>()
             .register_asset_loader(RonAbilityLoader)
@@ -22,6 +24,7 @@ impl Plugin for AbilityPlugin {
 
         app.register_component::<AbilityLoadout>();
         app.register_component::<AbilityEffect>();
+        app.register_component::<AbilityCast>();
     }
 }
 

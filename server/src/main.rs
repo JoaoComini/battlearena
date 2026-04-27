@@ -24,7 +24,6 @@ fn main() {
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaServerPlugin);
-    app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityServerPlugin);
 
     app.world_mut().spawn(BattleArenaServer {

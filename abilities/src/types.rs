@@ -71,6 +71,14 @@ impl AbilityEffect {
     }
 }
 
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+pub struct AbilityCast {
+    pub slot: usize,
+    pub origin: Vec2,
+    pub facing_rad: f32,
+    pub cast_id: u64,
+}
+
 #[derive(Component, Debug, Clone, Copy)]
 pub struct HitboxCaster(pub Entity);
 

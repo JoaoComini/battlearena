@@ -9,7 +9,7 @@ use shared::{CLIENT_PORT, FIXED_TIMESTEP_HZ, SERVER_ADDR, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{client::AbilityClientPlugin, AbilityPlugin};
+use abilities::client::AbilityClientPlugin;
 use setup::{connect, BattleArenaClient, ClientTransports};
 use systems::BattleArenaClientPlugin;
 
@@ -36,7 +36,6 @@ fn main() {
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaClientPlugin);
-    app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityClientPlugin);
 
     app.world_mut().spawn(BattleArenaClient {

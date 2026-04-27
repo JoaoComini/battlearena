@@ -1,4 +1,4 @@
-use abilities::types::{AbilityLoadout, AbilitySlot};
+use abilities::types::{AbilityCast, AbilityLoadout, AbilitySlot};
 use characters::registry::CharacterRegistry;
 use characters::types::CharacterDef;
 use physics::MovementSpeed;
@@ -75,6 +75,7 @@ pub(crate) fn handle_connected(
             MovementSpeed(move_speed),
             CharacterType(char_key.to_string()),
             loadout,
+            AbilityCast::default(),
         ))
         .id();
 
