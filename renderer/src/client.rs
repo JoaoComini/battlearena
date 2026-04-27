@@ -30,6 +30,9 @@ impl Plugin for BattleArenaClientRendererPlugin {
         app.add_observer(handle_connection);
         app.add_observer(handle_disconnection);
 
+        app.add_systems(Startup, spawn_fps_counter);
+        app.add_systems(Update, update_fps_counter);
+
         app.add_systems(Startup, spawn_ability_hud);
         app.add_systems(Update, update_ability_hud);
     }
@@ -176,6 +179,34 @@ pub fn handle_disconnection(
     for entity in debug_text.iter() {
         commands.entity(entity).despawn();
     }
+}
+
+// ── FPS Counter ──────────────────────────────────────────────────────────────
+
+#[derive(Component)]
+struct FpsText;
+
+fn spawn_fps_counter(mut commands: Commands) {
+    commands.spawn((
+        FpsText,
+        Text("FPS: --".to_string()),
+        TextColor(Color::srgb(0.9, 0.9, 0.9)),
+        TextFont::from_font_size(16.0),
+        Node {
+            position_type: PositionType::Absolute,
+            top: Val::Px(8.0),
+            right: Val::Px(8.0),
+            ..default()
+        },
+    ));
+}
+
+fn update_fps_counter(time: Res<Time>, mut query: Query<&mut Text, With<FpsText>>) {
+    let Ok(mut text) = query.single_mut() else {
+        return;
+    };
+    let fps = 1.0 / time.delta_secs();
+    text.0 = format!("FPS: {:.0}", fps);
 }
 
 // ── Ability HUD ──────────────────────────────────────────────────────────────
