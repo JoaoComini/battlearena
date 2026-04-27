@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 
 pub const PLAYER_SIZE: f32 = 0.8;
 
+#[derive(Component, Reflect, Clone, Debug, Default)]
+#[reflect(Component)]
+pub struct Wall;
+
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MovementSpeed(pub f32);
 
@@ -47,6 +51,7 @@ impl Plugin for PhysicsPlugin {
             ..default()
         });
 
+        app.register_type::<Wall>();
         app.register_required_components::<Position, Transform>();
         app.register_required_components::<Rotation, Transform>();
         app.register_required_components::<Position, ApplyPosToTransform>();

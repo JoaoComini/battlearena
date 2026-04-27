@@ -1,5 +1,6 @@
 use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
+use physics::Wall;
 use protocol::Health;
 use crate::types::{AbilityCast, AbilityDef, AbilityEffect, AbilityLoadout, HitboxCaster, MeleeHitbox, ProjectileHitbox};
 
@@ -107,8 +108,10 @@ pub fn apply_hitbox_damage(
     mut hitboxes: Query<(Entity, &mut MeleeHitbox, &Collider)>,
     spatial_query: SpatialQuery,
     mut health_query: Query<&mut Health>,
+    target_query: Query<(&Position, &Collider)>,
+    wall_query: Query<(), With<Wall>>,
 ) {
-    for (_entity, mut hitbox, collider) in &mut hitboxes {
+    for (entity, mut hitbox, collider) in &mut hitboxes {
         let filter = SpatialQueryFilter::from_excluded_entities([hitbox.caster]);
 
         let hits = spatial_query.shape_intersections(
@@ -119,7 +122,35 @@ pub fn apply_hitbox_damage(
         );
 
         for hit in hits {
-            if !hitbox.already_hit.contains(&hit) {
+            if hitbox.already_hit.contains(&hit) {
+                continue;
+            }
+
+            let blocked = target_query.get(hit).ok().is_some_and(|(target_pos, target_collider)| {
+                let to_target = target_pos.0 - hitbox.origin;
+                let distance = to_target.length();
+                if distance <= 0.001 {
+                    return false;
+                }
+                let Ok(dir) = Dir2::try_from(to_target) else { return false; };
+
+                // Perpendicular offset to sample both far edges of the target's collider
+                let radius = target_collider.shape().as_ball().map_or(0.4, |b| b.radius as f32);
+                let perp = Vec2::new(-dir.y, dir.x) * radius;
+                let los_filter = SpatialQueryFilter::from_excluded_entities([hitbox.caster, hit, entity]);
+
+                let ray_blocked = |origin_offset: Vec2| -> bool {
+                    let ray_origin = hitbox.origin + origin_offset;
+                    spatial_query
+                        .cast_ray(ray_origin, dir, distance, true, &los_filter)
+                        .is_some_and(|ray_hit| wall_query.contains(ray_hit.entity))
+                };
+
+                // Both sides must be blocked for the target to be considered behind a wall
+                ray_blocked(perp) && ray_blocked(-perp)
+            });
+
+            if !blocked {
                 if let Ok(mut health) = health_query.get_mut(hit) {
                     health.current -= hitbox.damage;
                 }

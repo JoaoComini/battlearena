@@ -7367,6 +7367,7 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "physics",
  "ron",
  "serde",
  "tempfile",
