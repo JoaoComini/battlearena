@@ -91,13 +91,24 @@ pub fn move_projectiles(
     }
 }
 
+pub fn tick_melee_lifetime(
+    mut hitboxes: Query<(Entity, &mut MeleeHitbox)>,
+    mut commands: Commands,
+) {
+    for (entity, mut hitbox) in &mut hitboxes {
+        hitbox.lifetime_frames = hitbox.lifetime_frames.saturating_sub(1);
+        if hitbox.lifetime_frames == 0 {
+            commands.entity(entity).despawn();
+        }
+    }
+}
+
 pub fn apply_hitbox_damage(
     mut hitboxes: Query<(Entity, &mut MeleeHitbox, &Collider)>,
     spatial_query: SpatialQuery,
     mut health_query: Query<&mut Health>,
-    mut commands: Commands,
 ) {
-    for (entity, mut hitbox, collider) in &mut hitboxes {
+    for (_entity, mut hitbox, collider) in &mut hitboxes {
         let filter = SpatialQueryFilter::from_excluded_entities([hitbox.caster]);
 
         let hits = spatial_query.shape_intersections(
@@ -114,11 +125,6 @@ pub fn apply_hitbox_damage(
                 }
                 hitbox.already_hit.push(hit);
             }
-        }
-
-        hitbox.lifetime_frames = hitbox.lifetime_frames.saturating_sub(1);
-        if hitbox.lifetime_frames == 0 {
-            commands.entity(entity).despawn();
         }
     }
 }

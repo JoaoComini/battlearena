@@ -9,23 +9,22 @@ pub struct AbilityClientPlugin;
 impl Plugin for AbilityClientPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(AbilitySharedPlugin);
-        app.add_observer(on_ability_cast);
-        app.add_systems(FixedUpdate, (tick_cooldowns, move_projectiles).chain());
+        app.add_systems(FixedUpdate, (tick_cooldowns, on_ability_cast, move_projectiles).chain());
     }
 }
 
 fn on_ability_cast(
-    trigger: On<Replace, AbilityCast>,
-    players: Query<(&AbilityCast, &AbilityLoadout)>,
+    players: Query<(Entity, &AbilityCast, &AbilityLoadout), Changed<AbilityCast>>,
     registry: Res<AbilityRegistry>,
     assets: Res<Assets<AbilityDef>>,
     mut commands: Commands,
 ) {
-    let Ok((cast, loadout)) = players.get(trigger.entity) else { return };
-    if cast.cast_id == 0 { return; }
+    for (entity, cast, loadout) in &players {
+        if cast.cast_id == 0 { continue; }
 
-    let Some(slot) = loadout.slots.get(cast.slot) else { return };
-    let Some(def) = registry.get(&slot.key, &assets) else { return };
+        let Some(slot) = loadout.slots.get(cast.slot) else { continue };
+        let Some(def) = registry.get(&slot.key, &assets) else { continue };
 
-    spawn_hitbox(trigger.entity, cast, def, &mut commands);
+        spawn_hitbox(entity, cast, def, &mut commands);
+    }
 }
