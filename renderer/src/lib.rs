@@ -3,9 +3,13 @@ pub mod client;
 #[cfg(feature = "server")]
 pub mod server;
 
+pub mod animation;
+
 use bevy::{color::palettes::css::BLUE, prelude::*};
 use protocol::*;
 use scene::LoadScene;
+
+use crate::animation::CharacterAnimationPlugin;
 
 #[derive(Component)]
 struct CharacterVisual;
@@ -15,6 +19,7 @@ pub struct BattleArenaRendererPlugin;
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(physics::debug::PhysicsDebugRenderPlugin);
+        app.add_plugins(CharacterAnimationPlugin);
         app.add_observer(on_player_spawn);
         app.add_systems(Startup, init);
         app.add_systems(Update, draw_player_foward);

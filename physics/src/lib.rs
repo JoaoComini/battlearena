@@ -162,7 +162,7 @@ pub fn apply_move_and_slide(
 }
 
 pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
-    const MOVE_SPEED: f32 = 4.0;
+    const MOVE_SPEED: f32 = 4.8;
     for (mut velocity, input) in &mut query {
         let Inputs::PlayerInput(player_input) = &input.0;
         let direction = &player_input.movement;
