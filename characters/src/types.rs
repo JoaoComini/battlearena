@@ -1,4 +1,7 @@
+use abilities::types::{AbilityCast, AbilityLoadout, AbilitySlot};
 use bevy::prelude::*;
+use physics::MovementSpeed;
+use protocol::{CharacterType, Health};
 use serde::{Deserialize, Serialize};
 
 #[derive(Asset, Reflect, Serialize, Deserialize, Clone, Debug)]
@@ -11,32 +14,25 @@ pub struct CharacterDef {
     pub playable: bool,
 }
 
-/// Raw status values derived from a `CharacterDef`, used to build player components.
-pub struct CharacterStatus {
-    pub key: String,
-    pub max_health: f32,
-    pub move_speed: f32,
-    pub ability_slots: Vec<String>,
+#[derive(Bundle)]
+pub struct CharacterBundle {
+    pub health: Health,
+    pub move_speed: MovementSpeed,
+    pub character_type: CharacterType,
+    pub loadout: AbilityLoadout,
+    pub ability_cast: AbilityCast,
 }
 
 impl CharacterDef {
-    pub fn to_status(&self) -> CharacterStatus {
-        CharacterStatus {
-            key: self.key.clone(),
-            max_health: self.max_health,
-            move_speed: self.move_speed,
-            ability_slots: self.ability_slots.clone(),
-        }
-    }
-}
-
-impl Default for CharacterStatus {
-    fn default() -> Self {
-        CharacterStatus {
-            key: "unknown".to_string(),
-            max_health: 100.0,
-            move_speed: 200.0,
-            ability_slots: vec!["melee".to_string()],
+    pub fn to_bundle(&self) -> CharacterBundle {
+        CharacterBundle {
+            health: Health { current: self.max_health, max: self.max_health },
+            move_speed: MovementSpeed(self.move_speed),
+            character_type: CharacterType(self.key.clone()),
+            loadout: AbilityLoadout {
+                slots: self.ability_slots.iter().map(|k| AbilitySlot::new(k)).collect(),
+            },
+            ability_cast: AbilityCast::default(),
         }
     }
 }

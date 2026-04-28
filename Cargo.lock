@@ -30,7 +30,6 @@ dependencies = [
  "protocol",
  "ron",
  "serde",
- "shared",
 ]
 
 [[package]]
@@ -2558,7 +2557,12 @@ dependencies = [
 name = "characters"
 version = "0.1.0"
 dependencies = [
+ "abilities",
+ "avian2d 0.6.1",
  "bevy",
+ "lightyear",
+ "physics",
+ "protocol",
  "ron",
  "serde",
 ]

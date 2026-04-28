@@ -8,6 +8,11 @@ publish = false
 bevy = { workspace = true }
 serde = { workspace = true }
 ron = { workspace = true }
+avian2d = { workspace = true }
+lightyear = { workspace = true }
+protocol = { workspace = true }
+physics = { workspace = true }
+abilities = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,15 +1,11 @@
-pub mod dummy;
-
 use bevy::prelude::*;
-use characters::CharactersPlugin;
+use characters::{CharactersPlugin, DummyPlugin};
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
 use physics::PhysicsPlugin;
 use protocol::*;
 use scene::ScenePlugin;
-
-use crate::dummy::DummyPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 60.0;
 pub const SERVER_PORT: u16 = 5888;

@@ -152,7 +152,7 @@ pub fn apply_hitbox_damage(
 
             if !blocked {
                 if let Ok(mut health) = health_query.get_mut(hit) {
-                    health.current -= hitbox.damage;
+                    health.apply_damage(hitbox.damage);
                 }
                 hitbox.already_hit.push(hit);
             }
@@ -195,7 +195,7 @@ pub fn apply_projectile_damage(
     for (_entity, mut proj) in &mut projectiles {
         for &hit in &proj.already_hit {
             if let Ok(mut health) = health_query.get_mut(hit) {
-                health.current -= proj.damage;
+                health.apply_damage(proj.damage);
             }
         }
         proj.already_hit.clear();

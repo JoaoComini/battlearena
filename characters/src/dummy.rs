@@ -1,7 +1,7 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use characters::registry::CharacterRegistry;
-use characters::types::CharacterDef;
+use crate::registry::CharacterRegistry;
+use crate::types::CharacterDef;
 use lightyear::prelude::*;
 use physics::PLAYER_SIZE;
 use protocol::{CharacterType, Health};

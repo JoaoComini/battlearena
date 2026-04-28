@@ -1,10 +1,16 @@
+pub mod dummy;
 pub mod registry;
 pub mod types;
+
+pub use dummy::DummyPlugin;
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
-use crate::registry::{load_characters, CharacterRegistry};
+use crate::registry::{
+    check_characters_ready, load_characters, register_loaded_characters, CharacterRegistry,
+};
+pub use crate::registry::CharactersReady;
 use crate::types::CharacterDef;
 
 pub struct CharactersPlugin;
@@ -14,7 +20,9 @@ impl Plugin for CharactersPlugin {
         app.init_asset::<CharacterDef>()
             .register_asset_loader(RonCharacterLoader)
             .init_resource::<CharacterRegistry>()
-            .add_systems(Startup, load_characters);
+            .init_resource::<CharactersReady>()
+            .add_systems(Startup, load_characters)
+            .add_systems(Update, (register_loaded_characters, check_characters_ready).chain());
     }
 }
 
