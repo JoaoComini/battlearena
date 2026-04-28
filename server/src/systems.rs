@@ -1,6 +1,6 @@
 use abilities::types::{AbilityCast, AbilityLoadout, AbilitySlot};
 use characters::registry::CharacterRegistry;
-use characters::types::CharacterDef;
+use characters::types::{CharacterDef, CharacterStatus};
 use physics::MovementSpeed;
 use protocol::*;
 use shared::SEND_INTERVAL;
@@ -45,19 +45,11 @@ pub(crate) fn handle_connected(
     let char_key = if counter.0 % 2 == 0 { "comini" } else { "kaps" };
     counter.0 += 1;
 
-    let (max_health, move_speed, ability_slots) =
-        if let Some(def) = registry.get(char_key, &char_assets) {
-            (def.max_health, def.move_speed, def.ability_slots.clone())
-        } else {
-            warn!(
-                "CharacterDef '{}' not yet loaded, using defaults",
-                char_key
-            );
-            (100.0, 200.0, vec!["melee".to_string()])
-        };
-
-    let loadout = AbilityLoadout {
-        slots: ability_slots.iter().map(|k| AbilitySlot::new(k)).collect(),
+    let status = if let Some(def) = registry.get(char_key, &char_assets) {
+        def.to_status()
+    } else {
+        warn!("CharacterDef '{}' not yet loaded, using defaults", char_key);
+        CharacterStatus::default()
     };
 
     let entity = commands
@@ -71,10 +63,12 @@ pub(crate) fn handle_connected(
                 lifetime: Default::default(),
             },
             DisableReplicateHierarchy,
-            Health { current: max_health, max: max_health },
-            MovementSpeed(move_speed),
-            CharacterType(char_key.to_string()),
-            loadout,
+            Health { current: status.max_health, max: status.max_health },
+            MovementSpeed(status.move_speed),
+            CharacterType(status.key.clone()),
+            AbilityLoadout {
+                slots: status.ability_slots.iter().map(|k| AbilitySlot::new(k)).collect(),
+            },
             AbilityCast::default(),
         ))
         .id();
