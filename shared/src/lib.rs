@@ -1,8 +1,10 @@
+use avian2d::prelude::PhysicsSystems;
 use bevy::prelude::*;
-use characters::{CharactersPlugin, DummyPlugin};
+use characters::CharactersPlugin;
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
+use lightyear::prelude::PredictionSystems;
 use physics::PhysicsPlugin;
 use protocol::*;
 use scene::ScenePlugin;
@@ -46,9 +48,17 @@ impl Plugin for SharedPlugin {
         app.add_plugins(PhysicsPlugin);
         app.add_plugins(InputPlugin);
         app.add_plugins(ScenePlugin);
-        app.add_plugins(DummyPlugin);
         app.add_plugins(CharactersPlugin);
         app.add_systems(Startup, spawn_scene);
+
+        app.configure_sets(
+            FixedPostUpdate,
+            (
+                PhysicsSystems::StepSimulation,
+                PredictionSystems::UpdateHistory,
+            )
+                .chain(),
+        );
     }
 }
 

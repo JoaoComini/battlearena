@@ -4,4 +4,5 @@
     move_speed: 0.0,
     ability_slots: [],
     playable: false,
+    visual: None,
 )

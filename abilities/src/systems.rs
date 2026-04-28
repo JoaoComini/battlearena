@@ -5,7 +5,7 @@ use crate::types::{
 use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use physics::pie_slice_collider;
-use protocol::Health;
+use crate::attributes::Health;
 
 pub(crate) fn advance_instance(
     trigger: On<Add, Advance>,

@@ -4,7 +4,7 @@ use bevy::{asset::AssetPath, prelude::*};
 use protocol::PlayerId;
 use std::collections::HashMap;
 
-use crate::CharacterVisual;
+use crate::types::{Character, CharacterDef};
 
 pub struct CharacterAnimationPlugin;
 
@@ -74,23 +74,27 @@ impl Paths {
 
 fn on_scene_ready(
     trigger: On<SceneInstanceReady>,
-    visuals: Query<&CharacterVisual>,
-    mut commands: Commands,
+    characters: Query<&Character>,
+    char_assets: Res<Assets<CharacterDef>>,
     asset_server: Res<AssetServer>,
+    mut commands: Commands,
     mut graphs: ResMut<Assets<AnimationGraph>>,
     children: Query<&Children>,
     animation_players: Query<Entity, With<AnimationPlayer>>,
 ) {
     let root = trigger.entity;
-    let Ok(visual) = visuals.get(root) else {
-        return;
-    };
+    let Ok(character) = characters.get(root) else { return };
+    let Some(def) = char_assets.get(&character.0) else { return };
+    let Some(ref visual_handle) = def.visual else { return };
+    let Some(asset_path) = asset_server.get_path(visual_handle) else { return };
+    let glb = asset_path.path().to_string_lossy().into_owned();
+
     let Some(player_entity) = find_descendant(root, &children, &animation_players) else {
         warn!("No AnimationPlayer found in character scene");
         return;
     };
 
-    let p = Paths::new(&visual.0);
+    let p = Paths::new(&glb);
     let mut graph = AnimationGraph::new();
     let r = graph.root;
     let mut map = HashMap::default();

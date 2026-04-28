@@ -1,8 +1,11 @@
 pub mod client;
+pub mod attributes;
 pub mod debug;
 pub mod server;
 pub mod systems;
 pub mod types;
+
+pub use attributes::{Health, MovementSpeed};
 
 use crate::types::{AbilityCooldowns, AbilityDef, AbilityInstance, Active, Casting};
 use bevy::asset::io::Reader;
@@ -17,6 +20,12 @@ impl Plugin for AbilitySharedPlugin {
         app.init_asset::<AbilityDef>()
             .register_asset_loader(RonAbilityLoader);
 
+        app.register_component::<Health>();
+        app.register_component::<MovementSpeed>()
+            .add_prediction()
+            .add_should_rollback(|a: &MovementSpeed, b: &MovementSpeed| {
+                (a.0 - b.0).abs() >= 0.001
+            });
         app.register_component::<AbilityCooldowns>();
         app.register_component::<AbilityInstance>();
         app.register_component::<Casting>();

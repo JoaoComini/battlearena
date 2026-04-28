@@ -1,8 +1,11 @@
 use abilities::types::{AbilityCooldowns, AbilityDef, AbilityLoadout, AbilitySlot};
+use abilities::{Health, MovementSpeed};
 use bevy::prelude::*;
-use physics::MovementSpeed;
-use protocol::{CharacterType, Health};
+use physics::MoveAndSlideBundle;
 use serde::{Deserialize, Serialize};
+
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CharacterId(pub String);
 
 /// Serialized form — ability slots are asset path strings.
 #[derive(Serialize, Deserialize)]
@@ -12,6 +15,7 @@ pub(crate) struct CharacterDefRaw {
     pub move_speed: f32,
     pub ability_slots: Vec<String>,
     pub playable: bool,
+    pub visual: Option<String>,
 }
 
 #[derive(Asset, Reflect, Clone, Debug)]
@@ -21,15 +25,19 @@ pub struct CharacterDef {
     pub move_speed: f32,
     pub ability_slots: Vec<Handle<AbilityDef>>,
     pub playable: bool,
+    pub visual: Option<Handle<Scene>>,
 }
+
+#[derive(Component, Clone)]
+pub struct Character(pub Handle<CharacterDef>);
 
 #[derive(Bundle)]
 pub struct CharacterBundle {
     pub health: Health,
     pub move_speed: MovementSpeed,
-    pub character_type: CharacterType,
     pub loadout: AbilityLoadout,
     pub cooldowns: AbilityCooldowns,
+    pub physics: MoveAndSlideBundle,
 }
 
 impl CharacterDef {
@@ -41,7 +49,6 @@ impl CharacterDef {
                 max: self.max_health,
             },
             move_speed: MovementSpeed(self.move_speed),
-            character_type: CharacterType(self.key.clone()),
             loadout: AbilityLoadout {
                 slots: self
                     .ability_slots
@@ -50,6 +57,7 @@ impl CharacterDef {
                     .collect(),
             },
             cooldowns: AbilityCooldowns::new(slot_count),
+            physics: MoveAndSlideBundle::default(),
         }
     }
 }

@@ -3,15 +3,8 @@ pub mod client;
 #[cfg(feature = "server")]
 pub mod server;
 
-pub mod animation;
-
 use bevy::{color::palettes::css::BLUE, prelude::*};
 use protocol::*;
-
-use crate::animation::CharacterAnimationPlugin;
-
-#[derive(Component)]
-pub struct CharacterVisual(pub String);
 
 pub struct BattleArenaRendererPlugin;
 
@@ -19,8 +12,6 @@ impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(physics::debug::PhysicsDebugRenderPlugin);
         app.add_plugins(abilities::debug::AbilityDebugPlugin);
-        app.add_plugins(CharacterAnimationPlugin);
-        app.add_observer(on_player_spawn);
         app.add_systems(Startup, init);
         app.add_systems(Update, draw_player_foward);
         app.add_systems(PostUpdate, follow_local_player);
@@ -45,25 +36,6 @@ fn init(mut commands: Commands) {
         },
         Transform::from_xyz(100.0, 600.0, 300.0).looking_at(Vec3::ZERO, Vec3::Y),
     ));
-}
-
-fn on_player_spawn(trigger: On<Add, PlayerId>, mut commands: Commands, asset_server: Res<AssetServer>) {
-    let entity = trigger.entity;
-
-    let visual = commands
-        .spawn((
-            Transform::default(),
-            Visibility::default(),
-            SceneRoot(asset_server.load(
-                bevy::gltf::GltfAssetLabel::Scene(0)
-                    .from_asset("models/character.glb"),
-            )),
-            CharacterVisual("models/character.glb".to_string()),
-            ChildOf(entity),
-        ))
-        .id();
-
-    commands.entity(entity).add_child(visual);
 }
 
 fn follow_local_player(

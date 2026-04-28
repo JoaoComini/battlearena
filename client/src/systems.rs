@@ -5,7 +5,6 @@ use inputs::{AbilityInput, Direction, Inputs, PlayerInput};
 use lightyear::prelude::client::input::*;
 use lightyear::prelude::input::native::*;
 use lightyear::prelude::*;
-use physics::PlayerPhysicsBundle;
 use protocol::*;
 
 pub struct BattleArenaClientPlugin;
@@ -17,20 +16,7 @@ impl Plugin for BattleArenaClientPlugin {
             buffer_input.in_set(InputSystems::WriteClientInputs),
         );
         app.add_observer(handle_predicted_spawn);
-        app.add_observer(handle_interpolated_spawn);
     }
-}
-
-fn log_rollback(manager: Query<&lightyear::prelude::PredictionManager>) {
-    if let Ok(m) = manager.single() {
-        if m.is_rollback() {
-            info!("Rollback triggered");
-        }
-    }
-}
-
-fn log_interpolated_despawn(trigger: On<Remove, Interpolated>) {
-    info!("Interpolated removed from {:?}", trigger.entity);
 }
 
 pub(crate) fn buffer_input(
@@ -98,23 +84,7 @@ pub(crate) fn handle_predicted_spawn(
     if predicted.get(entity).is_err() {
         return;
     }
-    commands.entity(entity).insert((
-        PlayerPhysicsBundle::default(),
-        InputMarker::<Inputs>::default(),
-        LocalPlayer,
-    ));
-}
-
-pub(crate) fn handle_interpolated_spawn(
-    trigger: On<Add, (PlayerId, Interpolated)>,
-    interpolated: Query<(), (With<PlayerId>, With<Interpolated>)>,
-    mut commands: Commands,
-) {
-    let entity = trigger.entity;
-    if interpolated.get(entity).is_err() {
-        return;
-    }
     commands
         .entity(entity)
-        .insert(PlayerPhysicsBundle::default());
+        .insert((InputMarker::<Inputs>::default(), LocalPlayer));
 }

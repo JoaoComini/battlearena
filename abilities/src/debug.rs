@@ -1,7 +1,7 @@
 use avian2d::prelude::Position;
 use bevy::color::palettes::css::YELLOW;
 use bevy::prelude::*;
-use protocol::Health;
+use crate::attributes::Health;
 
 use crate::types::HitMarker;
 

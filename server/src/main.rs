@@ -7,7 +7,8 @@ use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{server::AbilityServerPlugin};
+use abilities::server::AbilityServerPlugin;
+use characters::DummyServerPlugin;
 use setup::{start, BattleArenaServer, ServerTransports};
 use systems::BattleArenaServerPlugin;
 
@@ -25,6 +26,7 @@ fn main() {
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaServerPlugin);
     app.add_plugins(AbilityServerPlugin);
+    app.add_plugins(DummyServerPlugin);
 
     app.world_mut().spawn(BattleArenaServer {
         conditioner: None,

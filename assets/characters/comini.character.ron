@@ -4,4 +4,5 @@
     move_speed: 4.0,
     ability_slots: ["abilities/melee.ability.ron", "abilities/projectile.ability.ron"],
     playable: true,
+    visual: Some("models/character.glb"),
 )

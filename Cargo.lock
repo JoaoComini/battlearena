@@ -2553,6 +2553,7 @@ dependencies = [
  "abilities",
  "avian2d 0.6.1",
  "bevy",
+ "inputs",
  "lightyear",
  "physics",
  "protocol",
@@ -2680,6 +2681,7 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_egui",
+ "characters",
  "clap",
  "inputs",
  "lightyear",
@@ -6520,9 +6522,6 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
- "inputs",
- "lightyear",
- "serde",
 ]
 
 [[package]]

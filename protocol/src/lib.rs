@@ -1,13 +1,13 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use physics::{MovementSpeed, PlayerPhysicsBundle};
+use physics::MoveAndSlideBundle;
 use serde::{Deserialize, Serialize};
 
 #[derive(Bundle)]
 pub struct PlayerBundle {
     pub id: PlayerId,
-    pub physics: PlayerPhysicsBundle,
+    pub physics: MoveAndSlideBundle,
 }
 
 impl PlayerBundle {
@@ -16,7 +16,7 @@ impl PlayerBundle {
         let color = Color::hsl(h, 0.8, 0.5);
         Self {
             id: PlayerId(id),
-            physics: PlayerPhysicsBundle::default(),
+            physics: MoveAndSlideBundle::default(),
         }
     }
 }
@@ -28,41 +28,11 @@ pub struct LocalPlayer;
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PlayerId(pub PeerId);
 
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct Health {
-    pub current: f32,
-    pub max: f32,
-}
-
-impl Health {
-    pub fn apply_damage(&mut self, amount: f32) {
-        self.current = (self.current - amount).clamp(0.0, self.max);
-    }
-
-    pub fn is_dead(&self) -> bool {
-        self.current <= 0.0
-    }
-}
-
-fn lerp_health(start: Health, end: Health, t: f32) -> Health {
-    Health {
-        current: start.current + (end.current - start.current) * t,
-        max: end.max,
-    }
-}
-
 #[derive(Event, Clone, Debug)]
 pub struct PlayerDied {
     pub client_id: PeerId,
     pub entity: Entity,
 }
-
-/// Identifies which character definition this entity uses.
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct CharacterType(pub String);
-
-// Channels
-pub struct Channel1;
 
 // Protocol
 #[derive(Clone)]
@@ -81,21 +51,5 @@ impl Plugin for ProtocolPlugin {
             .add_prediction()
             .add_should_rollback(|a: &Rotation, b: &Rotation| false);
 
-        app.register_component::<Health>();
-
-        app.register_component::<MovementSpeed>()
-            .add_prediction()
-            .add_should_rollback(|a: &MovementSpeed, b: &MovementSpeed| {
-                (a.0 - b.0).abs() >= 0.001
-            });
-
-        app.register_component::<CharacterType>();
-
-        // channels
-        app.add_channel::<Channel1>(ChannelSettings {
-            mode: ChannelMode::OrderedReliable(ReliableSettings::default()),
-            ..default()
-        })
-        .add_direction(NetworkDirection::ServerToClient);
     }
 }

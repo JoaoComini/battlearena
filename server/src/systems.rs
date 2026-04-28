@@ -1,8 +1,7 @@
+use abilities::Health;
 use bevy::prelude::*;
 use characters::dummy::Dummy;
-use characters::registry::CharacterRegistry;
-use characters::types::CharacterDef;
-use characters::CharactersReady;
+use characters::{CharacterId, CharactersReady};
 use lightyear::connection::client::Connected;
 use lightyear::prelude::server::*;
 use lightyear::prelude::*;
@@ -53,8 +52,6 @@ fn handle_connected(
     ready: Res<CharactersReady>,
     mut counter: ResMut<PlayerCounter>,
     mut pending: ResMut<PendingConnections>,
-    registry: Res<CharacterRegistry>,
-    char_assets: Res<Assets<CharacterDef>>,
     mut commands: Commands,
 ) {
     let Ok(client_id) = query.get(trigger.entity) else {
@@ -69,14 +66,7 @@ fn handle_connected(
     let char_key = if counter.0 % 2 == 0 { "comini" } else { "kaps" };
     counter.0 += 1;
 
-    spawn_player(
-        trigger.entity,
-        client_id.0,
-        char_key,
-        &registry,
-        &char_assets,
-        &mut commands,
-    );
+    spawn_player(trigger.entity, client_id.0, char_key, &mut commands);
 }
 
 fn flush_pending_connections(
@@ -84,8 +74,6 @@ fn flush_pending_connections(
     mut pending: ResMut<PendingConnections>,
     query: Query<&RemoteId, With<ClientOf>>,
     mut counter: ResMut<PlayerCounter>,
-    registry: Res<CharacterRegistry>,
-    char_assets: Res<Assets<CharacterDef>>,
     mut commands: Commands,
 ) {
     if !ready.0 || pending.0.is_empty() {
@@ -98,33 +86,15 @@ fn flush_pending_connections(
         };
         let char_key = if counter.0 % 2 == 0 { "comini" } else { "kaps" };
         counter.0 += 1;
-        spawn_player(
-            owner,
-            remote_id.0,
-            char_key,
-            &registry,
-            &char_assets,
-            &mut commands,
-        );
+        spawn_player(owner, remote_id.0, char_key, &mut commands);
     }
 }
 
-fn spawn_player(
-    owner: Entity,
-    client_id: PeerId,
-    char_key: &str,
-    registry: &CharacterRegistry,
-    char_assets: &Assets<CharacterDef>,
-    commands: &mut Commands,
-) {
-    let Some(def) = registry.get(char_key, char_assets) else {
-        warn!("CharacterDef '{}' not found, skipping spawn", char_key);
-        return;
-    };
-
+fn spawn_player(owner: Entity, client_id: PeerId, char_key: &str, commands: &mut Commands) {
     let entity = commands
         .spawn((
             PlayerBundle::new(client_id, Vec2::ZERO),
+            CharacterId(char_key.to_string()),
             Replicate::to_clients(NetworkTarget::All),
             PredictionTarget::to_clients(NetworkTarget::Single(client_id)),
             InterpolationTarget::to_clients(NetworkTarget::AllExceptSingle(client_id)),
@@ -133,7 +103,6 @@ fn spawn_player(
                 lifetime: Default::default(),
             },
             DisableReplicateHierarchy,
-            def.to_bundle(),
         ))
         .id();
 
@@ -145,7 +114,7 @@ fn spawn_player(
 
 fn check_player_death(
     mut commands: Commands,
-    players: Query<(Entity, &Health, &CharacterType, &ControlledBy), Without<Dummy>>,
+    players: Query<(Entity, &Health, &CharacterId, &ControlledBy), Without<Dummy>>,
     owners: Query<&RemoteId, With<ClientOf>>,
 ) {
     for (entity, health, char_type, controlled_by) in &players {
@@ -168,8 +137,6 @@ fn check_player_death(
 fn tick_respawns(
     mut commands: Commands,
     mut tickets: Query<(Entity, &mut RespawnTicket)>,
-    registry: Res<CharacterRegistry>,
-    char_assets: Res<Assets<CharacterDef>>,
     time: Res<Time>,
 ) {
     for (ticket_entity, mut ticket) in &mut tickets {
@@ -179,8 +146,6 @@ fn tick_respawns(
                 ticket.owner,
                 ticket.client_id,
                 &ticket.char_key,
-                &registry,
-                &char_assets,
                 &mut commands,
             );
             commands.entity(ticket_entity).despawn();

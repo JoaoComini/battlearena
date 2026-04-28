@@ -5,9 +5,6 @@ use avian2d::physics_transform::{
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;
-use inputs::Inputs;
-use lightyear::prelude::{input::native::ActionState, PredictionSystems};
-use serde::{Deserialize, Serialize};
 
 pub const PLAYER_SIZE: f32 = 0.8;
 
@@ -24,22 +21,18 @@ pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option
     Collider::convex_hull(points)
 }
 
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
-pub struct MovementSpeed(pub f32);
-
 #[derive(Component, Default)]
 pub struct MoveAndSlideResult(pub Vec2, pub Vec2, pub f32);
 
-// Player
 #[derive(Bundle)]
-pub struct PlayerPhysicsBundle {
+pub struct MoveAndSlideBundle {
     pub rigid_body: RigidBody,
     pub custom_position_integration: CustomPositionIntegration,
     pub collider: Collider,
     pub results: MoveAndSlideResult,
 }
 
-impl Default for PlayerPhysicsBundle {
+impl Default for MoveAndSlideBundle {
     fn default() -> Self {
         Self {
             rigid_body: RigidBody::Kinematic,
@@ -67,25 +60,7 @@ impl Plugin for PhysicsPlugin {
 
         app.add_plugins(PhysicsPlugins::default());
 
-        app.add_systems(
-            FixedUpdate,
-            (
-                set_lin_velocity,
-                set_rotation,
-                move_and_slide,
-                apply_move_and_slide,
-            )
-                .chain(),
-        );
-
-        app.configure_sets(
-            FixedPostUpdate,
-            (
-                PhysicsSystems::StepSimulation,
-                PredictionSystems::UpdateHistory,
-            )
-                .chain(),
-        );
+        app.add_systems(FixedUpdate, (move_and_slide, apply_move_and_slide).chain());
 
         app.configure_sets(
             FixedPostUpdate,
@@ -175,35 +150,5 @@ pub fn apply_move_and_slide(
     for (mut position, mut lin_vel, result) in &mut query {
         position.0 = result.0;
         lin_vel.0 = result.1;
-    }
-}
-
-pub fn set_lin_velocity(
-    mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>, &MovementSpeed)>,
-) {
-    for (mut velocity, input, speed) in &mut query {
-        let Inputs::PlayerInput(player_input) = &input.0;
-        let direction = &player_input.movement;
-        let mut dir = Vec2::ZERO;
-        if direction.up {
-            dir.y += 1.0;
-        }
-        if direction.down {
-            dir.y -= 1.0;
-        }
-        if direction.left {
-            dir.x -= 1.0;
-        }
-        if direction.right {
-            dir.x += 1.0;
-        }
-        velocity.0 = dir.normalize_or_zero() * speed.0;
-    }
-}
-
-pub fn set_rotation(mut query: Query<(&mut Rotation, &ActionState<Inputs>)>) {
-    for (mut rotation, input) in &mut query {
-        let Inputs::PlayerInput(player_input) = &input.0;
-        *rotation = Rotation::radians(player_input.movement.angle);
     }
 }

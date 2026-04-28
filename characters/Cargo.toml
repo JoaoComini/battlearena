@@ -13,6 +13,7 @@ lightyear = { workspace = true }
 protocol = { workspace = true }
 physics = { workspace = true }
 abilities = { workspace = true }
+inputs = { workspace = true }
 
 [lints]
 workspace = true
