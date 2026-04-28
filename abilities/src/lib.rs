@@ -1,27 +1,26 @@
 pub mod client;
-pub mod registry;
+pub mod debug;
 pub mod server;
 pub mod systems;
 pub mod types;
 
-use crate::registry::{load_abilities, AbilityRegistry};
-use crate::types::{AbilityDef, AbilityEffect, AbilityLoadout};
+use crate::types::{AbilityCooldowns, AbilityDef, AbilityInstance, Active, Casting};
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
 use bevy::prelude::*;
 use lightyear::prelude::*;
 
-pub struct AbilityPlugin;
+pub struct AbilitySharedPlugin;
 
-impl Plugin for AbilityPlugin {
+impl Plugin for AbilitySharedPlugin {
     fn build(&self, app: &mut App) {
         app.init_asset::<AbilityDef>()
-            .register_asset_loader(RonAbilityLoader)
-            .init_resource::<AbilityRegistry>()
-            .add_systems(Startup, load_abilities);
+            .register_asset_loader(RonAbilityLoader);
 
-        app.register_component::<AbilityLoadout>();
-        app.register_component::<AbilityEffect>();
+        app.register_component::<AbilityCooldowns>();
+        app.register_component::<AbilityInstance>();
+        app.register_component::<Casting>();
+        app.register_component::<Active>();
     }
 }
 

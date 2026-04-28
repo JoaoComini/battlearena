@@ -1,14 +1,11 @@
-pub mod dummy;
-
 use bevy::prelude::*;
+use characters::{CharactersPlugin, DummyPlugin};
 use core::net::{IpAddr, Ipv4Addr, SocketAddr};
 use core::time::Duration;
 use inputs::InputPlugin;
 use physics::PhysicsPlugin;
 use protocol::*;
 use scene::ScenePlugin;
-
-use crate::dummy::DummyPlugin;
 
 pub const FIXED_TIMESTEP_HZ: f64 = 60.0;
 pub const SERVER_PORT: u16 = 5888;
@@ -28,6 +25,19 @@ pub const SHARED_SETTINGS: SharedSettings = SharedSettings {
     private_key: [0; 32],
 };
 
+pub fn asset_plugin() -> bevy::asset::AssetPlugin {
+    bevy::asset::AssetPlugin {
+        file_path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("assets")
+            .to_string_lossy()
+            .into_owned(),
+        meta_check: bevy::asset::AssetMetaCheck::Never,
+        ..default()
+    }
+}
+
 pub struct SharedPlugin;
 
 impl Plugin for SharedPlugin {
@@ -36,11 +46,12 @@ impl Plugin for SharedPlugin {
         app.add_plugins(PhysicsPlugin);
         app.add_plugins(InputPlugin);
         app.add_plugins(ScenePlugin);
-        // app.add_plugins(DummyPlugin);
+        app.add_plugins(DummyPlugin);
+        app.add_plugins(CharactersPlugin);
         app.add_systems(Startup, spawn_scene);
     }
 }
 
 pub fn spawn_scene(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.spawn(DynamicSceneRoot(asset_server.load("assets/models/arena.scn.ron")));
+    commands.spawn(DynamicSceneRoot(asset_server.load("models/arena.scn.ron")));
 }

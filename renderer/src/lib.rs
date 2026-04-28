@@ -18,6 +18,7 @@ pub struct BattleArenaRendererPlugin;
 impl Plugin for BattleArenaRendererPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(physics::debug::PhysicsDebugRenderPlugin);
+        app.add_plugins(abilities::debug::AbilityDebugPlugin);
         app.add_plugins(CharacterAnimationPlugin);
         app.add_observer(on_player_spawn);
         app.add_systems(Startup, init);
@@ -55,9 +56,9 @@ fn on_player_spawn(trigger: On<Add, PlayerId>, mut commands: Commands, asset_ser
             Visibility::default(),
             SceneRoot(asset_server.load(
                 bevy::gltf::GltfAssetLabel::Scene(0)
-                    .from_asset("assets/models/character.glb"),
+                    .from_asset("models/character.glb"),
             )),
-            CharacterVisual("assets/models/character.glb".to_string()),
+            CharacterVisual("models/character.glb".to_string()),
             ChildOf(entity),
         ))
         .id();

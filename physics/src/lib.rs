@@ -7,8 +7,25 @@ use avian2d::prelude::*;
 use bevy::prelude::*;
 use inputs::Inputs;
 use lightyear::prelude::{input::native::ActionState, PredictionSystems};
+use serde::{Deserialize, Serialize};
 
 pub const PLAYER_SIZE: f32 = 0.8;
+
+pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Collider> {
+    let half = (angle_deg / 2.0).to_radians();
+    let steps = 8usize;
+    let mut points = vec![Vec2::ZERO];
+    let adjusted = facing_rad + std::f32::consts::FRAC_PI_2;
+    for i in 0..=steps {
+        let t = i as f32 / steps as f32;
+        let a = adjusted - half + t * 2.0 * half;
+        points.push(Vec2::from_angle(a) * range);
+    }
+    Collider::convex_hull(points)
+}
+
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MovementSpeed(pub f32);
 
 #[derive(Component, Default)]
 pub struct MoveAndSlideResult(pub Vec2, pub Vec2, pub f32);
@@ -161,9 +178,10 @@ pub fn apply_move_and_slide(
     }
 }
 
-pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>)>) {
-    const MOVE_SPEED: f32 = 4.8;
-    for (mut velocity, input) in &mut query {
+pub fn set_lin_velocity(
+    mut query: Query<(&mut LinearVelocity, &ActionState<Inputs>, &MovementSpeed)>,
+) {
+    for (mut velocity, input, speed) in &mut query {
         let Inputs::PlayerInput(player_input) = &input.0;
         let direction = &player_input.movement;
         let mut dir = Vec2::ZERO;
@@ -179,7 +197,7 @@ pub fn set_lin_velocity(mut query: Query<(&mut LinearVelocity, &ActionState<Inpu
         if direction.right {
             dir.x += 1.0;
         }
-        velocity.0 = dir.normalize_or_zero() * MOVE_SPEED;
+        velocity.0 = dir.normalize_or_zero() * speed.0;
     }
 }
 

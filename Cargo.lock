@@ -30,7 +30,6 @@ dependencies = [
  "protocol",
  "ron",
  "serde",
- "shared",
 ]
 
 [[package]]
@@ -491,13 +490,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
-]
-
-[[package]]
-name = "assets"
-version = "0.1.0"
-dependencies = [
- "bevy",
 ]
 
 [[package]]
@@ -2555,6 +2547,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "characters"
+version = "0.1.0"
+dependencies = [
+ "abilities",
+ "avian2d 0.6.1",
+ "bevy",
+ "lightyear",
+ "physics",
+ "protocol",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "chiapos-chacha8"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2670,7 +2676,6 @@ name = "client"
 version = "0.1.0"
 dependencies = [
  "abilities",
- "assets",
  "avian2d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
@@ -7358,6 +7363,7 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "physics",
  "ron",
  "serde",
  "tempfile",
@@ -7522,12 +7528,12 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "abilities",
- "assets",
  "async-compat",
  "avian2d 0.6.1",
  "bevy",
  "bevy-inspector-egui",
  "bevy_egui",
+ "characters",
  "lightyear",
  "physics",
  "protocol",
@@ -7575,6 +7581,7 @@ version = "0.1.0"
 dependencies = [
  "avian2d 0.6.1",
  "bevy",
+ "characters",
  "inputs",
  "lightyear",
  "physics",

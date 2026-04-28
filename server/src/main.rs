@@ -7,7 +7,7 @@ use shared::{FIXED_TIMESTEP_HZ, SERVER_PORT, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{server::AbilityServerPlugin, AbilityPlugin};
+use abilities::{server::AbilityServerPlugin};
 use setup::{start, BattleArenaServer, ServerTransports};
 use systems::BattleArenaServerPlugin;
 
@@ -24,7 +24,6 @@ fn main() {
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaServerPlugin);
-    app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityServerPlugin);
 
     app.world_mut().spawn(BattleArenaServer {
@@ -49,19 +48,10 @@ fn build_app(tick_duration: Duration) -> App {
     #[cfg(feature = "gui")]
     {
         let mut app = App::new();
-        app.add_plugins(assets::AssetPlugin);
         app.add_plugins(
             bevy::DefaultPlugins
                 .build()
-                .set(bevy::asset::AssetPlugin {
-                    file_path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .parent()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
-                    meta_check: bevy::asset::AssetMetaCheck::Never,
-                    ..default()
-                })
+                .set(shared::asset_plugin())
                 .set(LogPlugin {
                     level: Level::INFO,
                     filter: "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_enhanced_input::action::fns=error".to_string(),
@@ -87,7 +77,6 @@ fn build_app(tick_duration: Duration) -> App {
     #[cfg(not(feature = "gui"))]
     {
         let mut app = App::new();
-        app.add_plugins(assets::AssetPlugin);
         app.add_plugins((
             bevy::app::ScheduleRunnerPlugin::default(),
             LogPlugin {

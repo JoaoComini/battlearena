@@ -1,0 +1,7 @@
+(
+    key: "kaps",
+    max_health: 80.0,
+    move_speed: 4.5,
+    ability_slots: ["abilities/projectile.ability.ron"],
+    playable: true,
+)

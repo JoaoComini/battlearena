@@ -1,28 +1,134 @@
-use avian2d::prelude::{Collider, Position, SpatialQuery, SpatialQueryFilter};
+use crate::types::{
+    AbilityCooldowns, AbilityDef, AbilityEvent, AbilityInstance, AbilityLoadout, Active, Advance,
+    Casting, Ended, MeleeHitRequest, ProjectileHitbox, ProjectileRequest, TakeDamage,
+};
+use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
+use physics::pie_slice_collider;
 use protocol::Health;
-use crate::types::{AbilityLoadout, MeleeHitbox, ProjectileHitbox};
 
-pub fn tick_cooldowns(mut query: Query<&mut AbilityLoadout>, time: Res<Time>) {
-    for mut loadout in &mut query {
-        for slot in &mut loadout.slots {
-            slot.cooldown_remaining =
-                (slot.cooldown_remaining - time.delta_secs()).max(0.0);
+pub(crate) fn advance_instance(
+    trigger: On<Add, Advance>,
+    mut instances: Query<&mut AbilityInstance>,
+    mut casters: Query<(&AbilityLoadout, &mut AbilityCooldowns)>,
+    assets: Res<Assets<AbilityDef>>,
+    mut commands: Commands,
+) {
+    let entity = trigger.entity;
+    commands.entity(entity).remove::<Advance>();
+
+    let Ok(mut instance) = instances.get_mut(entity) else { return };
+    let caster = instance.caster;
+    let slot_idx = instance.slot;
+
+    let Ok((loadout, mut cooldowns)) = casters.get_mut(caster) else { return };
+    let Some(handle) = loadout.slots.get(slot_idx).map(|s| s.handle.clone()) else { return };
+    let Some(def) = assets.get(&handle) else { return };
+    let def = def.clone();
+
+    let Some(event) = def.events.get(instance.cursor) else {
+        commands.entity(entity).insert(Ended);
+        return;
+    };
+
+    match event {
+        AbilityEvent::Cast { secs } => {
+            commands.entity(entity).insert(Casting { remaining_secs: *secs });
+        }
+        AbilityEvent::Activate => {
+            if let Some(remaining) = cooldowns.remaining.get_mut(slot_idx) {
+                *remaining = def.cooldown_secs;
+            }
+            commands.entity(entity).insert((Active, Advance));
+        }
+        AbilityEvent::MeleeHit { range, angle_deg, damage } => {
+            commands.entity(entity).insert(MeleeHitRequest {
+                range: *range,
+                angle_deg: *angle_deg,
+                damage: *damage,
+            });
+        }
+        AbilityEvent::Projectile { speed, size, damage, max_range } => {
+            commands.entity(entity).insert(ProjectileRequest {
+                speed: *speed,
+                size: *size,
+                damage: *damage,
+                max_range: *max_range,
+            });
+        }
+    }
+    instance.cursor += 1;
+}
+
+pub fn tick_casting(
+    mut instances: Query<(Entity, &mut Casting)>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    for (entity, mut casting) in &mut instances {
+        casting.remaining_secs -= time.delta_secs();
+        if casting.remaining_secs <= 0.0 {
+            commands.entity(entity).remove::<Casting>().insert(Advance);
         }
     }
 }
 
-pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Collider> {
-    let half = (angle_deg / 2.0).to_radians();
-    let steps = 8usize;
-    let mut points = vec![Vec2::ZERO];
-    let adjusted = facing_rad + std::f32::consts::FRAC_PI_2;
-    for i in 0..=steps {
-        let t = i as f32 / steps as f32;
-        let a = adjusted - half + t * 2.0 * half;
-        points.push(Vec2::from_angle(a) * range);
+pub(crate) fn process_melee_hit_request(
+    instances: Query<(Entity, &MeleeHitRequest, &AbilityInstance)>,
+    spatial_query: SpatialQuery,
+    mut commands: Commands,
+) {
+    for (entity, req, instance) in &instances {
+        if let Some(collider) = pie_slice_collider(req.range, req.angle_deg, instance.facing_rad) {
+            let filter = SpatialQueryFilter::from_excluded_entities([instance.caster]);
+            let hits =
+                spatial_query.shape_intersections(&collider, instance.origin, 0.0, &filter);
+            for hit in hits {
+                commands.entity(hit).insert(TakeDamage(req.damage));
+            }
+        }
+        commands.entity(entity).remove::<MeleeHitRequest>().insert(Advance);
     }
-    Collider::convex_hull(points)
+}
+
+pub(crate) fn process_projectile_request(
+    instances: Query<(Entity, &ProjectileRequest, &AbilityInstance)>,
+    mut commands: Commands,
+) {
+    for (entity, req, instance) in &instances {
+        let direction = Vec2::from_angle(instance.facing_rad + std::f32::consts::FRAC_PI_2);
+        commands.spawn((
+            ProjectileHitbox {
+                instance: entity,
+                caster: instance.caster,
+                damage: req.damage,
+                speed: req.speed,
+                size: req.size,
+                max_range: req.max_range,
+                distance_traveled: 0.0,
+                direction,
+                already_hit: Vec::new(),
+            },
+            Position(instance.origin),
+            Rotation::radians(instance.facing_rad),
+            Collider::circle(req.size),
+        ));
+        commands.entity(entity).remove::<ProjectileRequest>();
+    }
+}
+
+pub fn despawn_ended(instances: Query<Entity, Added<Ended>>, mut commands: Commands) {
+    for entity in &instances {
+        commands.entity(entity).despawn();
+    }
+}
+
+pub fn tick_cooldowns(mut query: Query<&mut AbilityCooldowns>, time: Res<Time>) {
+    for mut cooldowns in &mut query {
+        for remaining in &mut cooldowns.remaining {
+            *remaining = (*remaining - time.delta_secs()).max(0.0);
+        }
+    }
 }
 
 pub fn move_projectiles(
@@ -36,67 +142,41 @@ pub fn move_projectiles(
         proj.distance_traveled += delta.length();
         if proj.distance_traveled >= proj.max_range {
             commands.entity(entity).despawn();
+            commands.entity(proj.instance).insert(Advance);
         }
     }
 }
 
-pub fn apply_hitbox_damage(
-    mut hitboxes: Query<(Entity, &mut MeleeHitbox, &Collider)>,
-    spatial_query: SpatialQuery,
-    mut health_query: Query<&mut Health>,
-    mut commands: Commands,
-) {
-    for (entity, mut hitbox, collider) in &mut hitboxes {
-        let filter = SpatialQueryFilter::from_excluded_entities([hitbox.caster]);
-
-        let hits = spatial_query.shape_intersections(
-            &collider,
-            hitbox.origin,
-            0.0,
-            &filter,
-        );
-
-        for hit in hits {
-            if !hitbox.already_hit.contains(&hit) {
-                if let Ok(mut health) = health_query.get_mut(hit) {
-                    health.current -= hitbox.damage;
-                }
-                hitbox.already_hit.push(hit);
-            }
-        }
-
-        hitbox.lifetime_frames = hitbox.lifetime_frames.saturating_sub(1);
-        if hitbox.lifetime_frames == 0 {
-            commands.entity(entity).despawn();
-        }
-    }
-}
-
-pub fn apply_projectile_damage(
+pub fn tick_projectile_collision(
     mut projectiles: Query<(Entity, &mut ProjectileHitbox, &Collider, &Position)>,
     spatial_query: SpatialQuery,
-    mut health_query: Query<&mut Health>,
     mut commands: Commands,
 ) {
     for (entity, mut proj, collider, position) in &mut projectiles {
         let filter = SpatialQueryFilter::from_excluded_entities([proj.caster, entity]);
-
-        let hits = spatial_query.shape_intersections(
-            collider,
-            position.0,
-            0.0,
-            &filter,
-        );
+        let hits = spatial_query.shape_intersections(collider, position.0, 0.0, &filter);
 
         for hit in hits {
             if !proj.already_hit.contains(&hit) {
-                if let Ok(mut health) = health_query.get_mut(hit) {
-                    health.current -= proj.damage;
-                }
                 proj.already_hit.push(hit);
+                commands.entity(hit).insert(TakeDamage(proj.damage));
                 commands.entity(entity).despawn();
+                commands.entity(proj.instance).insert(Advance);
                 break;
             }
         }
+    }
+}
+
+pub fn apply_damage(
+    targets: Query<(Entity, &TakeDamage)>,
+    mut health_query: Query<&mut Health>,
+    mut commands: Commands,
+) {
+    for (entity, TakeDamage(damage)) in &targets {
+        if let Ok(mut health) = health_query.get_mut(entity) {
+            health.apply_damage(*damage);
+        }
+        commands.entity(entity).remove::<TakeDamage>();
     }
 }

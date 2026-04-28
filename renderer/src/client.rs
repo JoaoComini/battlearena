@@ -1,4 +1,4 @@
-use abilities::types::AbilityLoadout;
+use abilities::types::AbilityCooldowns;
 use bevy::picking::prelude::{Click, Pointer};
 use bevy::prelude::*;
 use lightyear::connection::client::ClientState;
@@ -270,21 +270,18 @@ fn spawn_ability_hud(mut commands: Commands) {
 }
 
 fn update_ability_hud(
-    player: Query<&AbilityLoadout, With<LocalPlayer>>,
+    player: Query<&AbilityCooldowns, With<LocalPlayer>>,
     mut overlays: Query<(&CooldownOverlay, &mut Node)>,
 ) {
-    let Ok(loadout) = player.single() else { return };
+    let Ok(cooldowns) = player.single() else { return };
 
-    // find max cooldown per slot from the AbilityDef — we approximate by
-    // tracking the ratio: remaining / total is unknown without the registry
-    // here, so we just show remaining seconds as a 0-5s bar (clamped).
     const MAX_CD: f32 = 5.0;
 
     for (overlay, mut node) in &mut overlays {
-        let pct = loadout
-            .slots
+        let pct = cooldowns
+            .remaining
             .get(overlay.0)
-            .map(|s| (s.cooldown_remaining / MAX_CD).clamp(0.0, 1.0) * 100.0)
+            .map(|&r| (r / MAX_CD).clamp(0.0, 1.0) * 100.0)
             .unwrap_or(0.0);
         node.height = Val::Percent(pct);
     }

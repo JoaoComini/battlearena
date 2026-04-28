@@ -1,8 +1,10 @@
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use crate::registry::CharacterRegistry;
+use crate::types::CharacterDef;
 use lightyear::prelude::*;
 use physics::PLAYER_SIZE;
-use protocol::Health;
+use protocol::{CharacterType, Health};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -10,6 +12,9 @@ pub struct Dummy;
 
 #[derive(Resource)]
 struct DummyRespawnTimer(Timer);
+
+#[derive(Resource)]
+struct SpawnDummyFlag;
 
 pub struct DummyPlugin;
 
@@ -19,10 +24,10 @@ impl Plugin for DummyPlugin {
 
         app.add_observer(on_dummy_spawn);
         app.add_systems(Update, draw_dummy_healthbar);
-        app.add_systems(Startup, spawn_dummy);
+        app.add_systems(Startup, initial_spawn_dummy);
         app.add_systems(
             FixedUpdate,
-            (check_dummy_health, tick_dummy_respawn).chain(),
+            (check_dummy_health, tick_dummy_respawn, maybe_spawn_dummy).chain(),
         );
     }
 }
@@ -60,14 +65,12 @@ fn draw_dummy_healthbar(dummies: Query<(&Position, &Health), With<Dummy>>, mut g
         let center = Vec3::new(position.x, BAR_Y, -position.y);
         let pct = (health.current / health.max).clamp(0.0, 1.0);
 
-        // background (dark red)
         gizmos.rect(
             Isometry3d::new(center, Quat::IDENTITY),
             Vec2::new(BAR_WIDTH, BAR_HEIGHT),
             Color::srgb(0.4, 0.0, 0.0),
         );
 
-        // foreground (green), anchored left
         let filled_width = BAR_WIDTH * pct;
         let offset_x = (BAR_WIDTH - filled_width) * 0.5;
         gizmos.rect(
@@ -78,19 +81,33 @@ fn draw_dummy_healthbar(dummies: Query<(&Position, &Health), With<Dummy>>, mut g
     }
 }
 
-fn spawn_dummy(mut commands: Commands) {
+fn do_spawn_dummy(
+    commands: &mut Commands,
+    registry: &CharacterRegistry,
+    char_assets: &Assets<CharacterDef>,
+) {
+    let max_health = registry
+        .get("dummy", char_assets)
+        .map(|d| d.max_health)
+        .unwrap_or(100.0);
+
     commands.spawn((
         Dummy,
-        Health {
-            current: 100.0,
-            max: 100.0,
-        },
-        Position::from_xy(150.0, 0.0),
+        CharacterType("dummy".to_string()),
+        Health { current: max_health, max: max_health },
+        Position::from_xy(10.0, 0.0),
         RigidBody::Static,
-        Collider::circle(25.0),
+        Collider::circle(0.4),
         Replicate::to_clients(NetworkTarget::All),
-        InterpolationTarget::to_clients(NetworkTarget::All),
     ));
+}
+
+fn initial_spawn_dummy(
+    mut commands: Commands,
+    registry: Res<CharacterRegistry>,
+    char_assets: Res<Assets<CharacterDef>>,
+) {
+    do_spawn_dummy(&mut commands, &registry, &char_assets);
 }
 
 fn check_dummy_health(
@@ -104,7 +121,8 @@ fn check_dummy_health(
     for (entity, health) in &query {
         if health.current <= 0.0 {
             commands.entity(entity).despawn();
-            commands.insert_resource(DummyRespawnTimer(Timer::from_seconds(2.0, TimerMode::Once)));
+            commands
+                .insert_resource(DummyRespawnTimer(Timer::from_seconds(2.0, TimerMode::Once)));
         }
     }
 }
@@ -118,6 +136,19 @@ fn tick_dummy_respawn(
     timer.0.tick(time.delta());
     if timer.0.just_finished() {
         commands.remove_resource::<DummyRespawnTimer>();
-        spawn_dummy(commands);
+        commands.insert_resource(SpawnDummyFlag);
     }
+}
+
+fn maybe_spawn_dummy(
+    flag: Option<Res<SpawnDummyFlag>>,
+    mut commands: Commands,
+    registry: Res<CharacterRegistry>,
+    char_assets: Res<Assets<CharacterDef>>,
+) {
+    if flag.is_none() {
+        return;
+    }
+    commands.remove_resource::<SpawnDummyFlag>();
+    do_spawn_dummy(&mut commands, &registry, &char_assets);
 }

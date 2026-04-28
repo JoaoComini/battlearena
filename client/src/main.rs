@@ -9,7 +9,7 @@ use shared::{CLIENT_PORT, FIXED_TIMESTEP_HZ, SERVER_ADDR, SHARED_SETTINGS};
 mod setup;
 mod systems;
 
-use abilities::{client::AbilityClientPlugin, AbilityPlugin};
+use abilities::client::AbilityClientPlugin;
 use setup::{connect, BattleArenaClient, ClientTransports};
 use systems::BattleArenaClientPlugin;
 
@@ -36,7 +36,6 @@ fn main() {
 
     app.add_plugins(shared::SharedPlugin);
     app.add_plugins(BattleArenaClientPlugin);
-    app.add_plugins(AbilityPlugin);
     app.add_plugins(AbilityClientPlugin);
 
     app.world_mut().spawn(BattleArenaClient {
@@ -61,19 +60,11 @@ fn main() {
 
 fn build_app(tick_duration: Duration, client_id: u64) -> App {
     let mut app = App::new();
-    app.add_plugins(assets::AssetPlugin);
+
     app.add_plugins(
             bevy::DefaultPlugins
                 .build()
-                .set(bevy::asset::AssetPlugin {
-                    file_path: std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-                    .parent()
-                    .unwrap()
-                    .to_string_lossy()
-                    .into_owned(),
-                    meta_check: bevy::asset::AssetMetaCheck::Never,
-                    ..default()
-                })
+                .set(shared::asset_plugin())
                 .set(LogPlugin {
                     level: Level::INFO,
                     filter: "wgpu=error,bevy_render=info,bevy_ecs=warn,bevy_time=warn,naga=warn,bevy_enhanced_input::action::fns=error".to_string(),

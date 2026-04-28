@@ -1,30 +1,38 @@
 use bevy::prelude::*;
-use inputs::{Inputs, PlayerInput};
-use lightyear::prelude::input::native::{ActionState, InputMarker};
-use lightyear::prelude::*;
-use protocol::{AbilityChannel, UseAbility};
+use crate::systems::tick_cooldowns;
+use crate::types::{AbilityInstance, Active, Casting};
+use crate::AbilitySharedPlugin;
 
 pub struct AbilityClientPlugin;
 
 impl Plugin for AbilityClientPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, send_ability_requests);
+        app.add_plugins(AbilitySharedPlugin);
+        app.add_systems(FixedUpdate, tick_cooldowns);
+        app.add_observer(on_ability_instance_added);
+        app.add_observer(on_casting_added);
+        app.add_observer(on_active_added);
     }
 }
 
-fn send_ability_requests(
-    mut sender: Query<&mut MessageSender<UseAbility>>,
-    inputs: Query<&ActionState<Inputs>, With<InputMarker<Inputs>>>,
-) {
-    let Ok(mut sender) = sender.single_mut() else { return };
-    let Ok(action_state) = inputs.single() else { return };
-
-    let Inputs::PlayerInput(PlayerInput { abilities, .. }) = &action_state.0;
-
-    if abilities.slot1 {
-        sender.send::<AbilityChannel>(UseAbility { slot: 0 });
+fn on_ability_instance_added(trigger: On<Add, AbilityInstance>, query: Query<&AbilityInstance>) {
+    if let Ok(instance) = query.get(trigger.entity) {
+        info!(
+            "AbilityInstance added: {:?} caster={:?} slot={} cursor={}",
+            trigger.entity,
+            instance.caster,
+            instance.slot,
+            instance.cursor,
+        );
     }
-    if abilities.slot2 {
-        sender.send::<AbilityChannel>(UseAbility { slot: 1 });
+}
+
+fn on_casting_added(trigger: On<Add, Casting>, query: Query<&Casting>) {
+    if let Ok(waiting) = query.get(trigger.entity) {
+        info!("Casting added: {:?} remaining={:.2}s", trigger.entity, waiting.remaining_secs);
     }
+}
+
+fn on_active_added(trigger: On<Add, Active>) {
+    info!("Active added: {:?}", trigger.entity);
 }

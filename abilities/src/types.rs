@@ -1,95 +1,112 @@
 use bevy::prelude::*;
-use physics::debug::DebugGizmoHitbox;
 use serde::{Deserialize, Serialize};
 
-#[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct AbilityKey(pub String);
+#[derive(Clone, Debug)]
+pub struct AbilitySlot {
+    pub handle: Handle<AbilityDef>,
+}
 
-impl AbilityKey {
-    pub fn new(s: &str) -> Self {
-        Self(s.to_string())
+impl AbilitySlot {
+    pub fn new(handle: Handle<AbilityDef>) -> Self {
+        Self { handle }
+    }
+}
+
+#[derive(Component, Clone, Debug, Default)]
+pub struct AbilityLoadout {
+    pub slots: Vec<AbilitySlot>,
+}
+
+/// Replicated cooldown state — one entry per slot, in order.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
+pub struct AbilityCooldowns {
+    pub remaining: Vec<f32>,
+}
+
+impl AbilityCooldowns {
+    pub fn new(count: usize) -> Self {
+        Self { remaining: vec![0.0; count] }
+    }
+
+    pub fn is_ready(&self, slot: usize) -> bool {
+        self.remaining.get(slot).map_or(false, |&r| r <= 0.0)
     }
 }
 
 #[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct AbilitySlot {
-    pub key: AbilityKey,
-    pub cooldown_remaining: f32,
-}
-
-impl AbilitySlot {
-    pub fn new(key: &str) -> Self {
-        Self {
-            key: AbilityKey::new(key),
-            cooldown_remaining: 0.0,
-        }
-    }
-
-    pub fn is_ready(&self) -> bool {
-        self.cooldown_remaining <= 0.0
-    }
-}
-
-#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug, Default)]
-pub struct AbilityLoadout {
-    pub slots: Vec<AbilitySlot>,
+pub enum AbilityEvent {
+    Cast { secs: f32 },
+    Activate,
+    MeleeHit { range: f32, angle_deg: f32, damage: f32 },
+    Projectile { speed: f32, size: f32, damage: f32, max_range: f32 },
 }
 
 #[derive(Asset, Reflect, Serialize, Deserialize, Clone, Debug)]
 pub struct AbilityDef {
     pub key: String,
     pub cooldown_secs: f32,
-    pub effect: AbilityEffect,
+    pub events: Vec<AbilityEvent>,
 }
 
-#[derive(Reflect, Component, Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub enum AbilityEffect {
-    MeleeHit {
-        range: f32,
-        angle_deg: f32,
-        damage: f32,
-        lifetime_frames: u32,
-    },
-    Projectile {
-        speed: f32,
-        size: f32,
-        damage: f32,
-        max_range: f32,
-    },
-}
-
-impl AbilityEffect {
-    pub fn to_debug_gizmo(&self) -> DebugGizmoHitbox {
-        match self {
-            AbilityEffect::MeleeHit { range, angle_deg, .. } => {
-                DebugGizmoHitbox::PieSlice { range: *range, angle_deg: *angle_deg }
-            }
-            AbilityEffect::Projectile { size, .. } => {
-                DebugGizmoHitbox::Circle { radius: *size }
-            }
-        }
-    }
-}
-
-#[derive(Component, Debug, Clone, Copy)]
-pub struct HitboxCaster(pub Entity);
-
-#[derive(Component, Debug)]
-pub struct MeleeHitbox {
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct AbilityInstance {
     pub caster: Entity,
-    pub damage: f32,
+    pub slot: usize,
+    pub origin: Vec2,
+    pub facing_rad: f32,
+    pub cursor: usize,
+}
+
+/// Server-internal: inserted to advance the instance cursor and insert the next request.
+#[derive(Component)]
+pub(crate) struct Advance;
+
+#[derive(Component)]
+pub(crate) struct MeleeHitRequest {
     pub range: f32,
     pub angle_deg: f32,
-    pub lifetime_frames: u32,
-    /// World-space origin of the hitbox (caster position at spawn).
-    pub origin: Vec2,
-    /// Facing angle in radians at spawn time.
-    pub facing_rad: f32,
-    pub already_hit: Vec<Entity>,
+    pub damage: f32,
+}
+
+#[derive(Component)]
+pub(crate) struct ProjectileRequest {
+    pub speed: f32,
+    pub size: f32,
+    pub damage: f32,
+    pub max_range: f32,
+}
+
+/// Replicated: instance is in its cast-time phase.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Casting {
+    pub remaining_secs: f32,
+}
+
+/// Replicated: the instance has fired at least once (Activate processed). Never removed.
+#[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Active;
+
+/// The instance has fully resolved and should be despawned.
+#[derive(Component)]
+pub struct Ended;
+
+#[derive(Component)]
+pub struct TakeDamage(pub f32);
+
+#[derive(Component, Debug)]
+pub struct HitMarker {
+    pub timer: Timer,
+}
+
+impl HitMarker {
+    pub fn new() -> Self {
+        Self { timer: Timer::from_seconds(0.4, TimerMode::Once) }
+    }
 }
 
 #[derive(Component, Debug)]
 pub struct ProjectileHitbox {
+    pub instance: Entity,
     pub caster: Entity,
     pub damage: f32,
     pub speed: f32,
