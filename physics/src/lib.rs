@@ -5,6 +5,7 @@ use avian2d::physics_transform::{
 };
 use avian2d::prelude::*;
 use bevy::prelude::*;
+use lightyear::prelude::Interpolated;
 
 pub const PLAYER_SIZE: f32 = 0.8;
 
@@ -122,7 +123,7 @@ pub fn move_and_slide(
         &Collider,
         &Rotation,
         &mut MoveAndSlideResult,
-    )>,
+    ), Without<Interpolated>>,
     move_and_slide: MoveAndSlide,
     time: Res<Time>,
 ) {
@@ -145,7 +146,7 @@ pub fn move_and_slide(
 }
 
 pub fn apply_move_and_slide(
-    mut query: Query<(&mut Position, &mut LinearVelocity, &MoveAndSlideResult)>,
+    mut query: Query<(&mut Position, &mut LinearVelocity, &MoveAndSlideResult), Without<Interpolated>>,
 ) {
     for (mut position, mut lin_vel, result) in &mut query {
         position.0 = result.0;

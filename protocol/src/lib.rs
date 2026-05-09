@@ -55,9 +55,6 @@ impl Plugin for ProtocolPlugin {
             .add_prediction()
             .add_should_rollback(|a: &LinearVelocity, b: &LinearVelocity| {
                 (a.0 - b.0).length() >= 0.01
-            })
-            .add_interpolation_with(|start: LinearVelocity, end: LinearVelocity, t: f32| {
-                LinearVelocity(start.0.lerp(end.0, t))
             });
 
     }
