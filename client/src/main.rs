@@ -11,6 +11,7 @@ mod systems;
 
 use abilities::client::AbilityClientPlugin;
 use characters::DummyClientPlugin;
+use vfx::VfxPlugin;
 use setup::{connect, BattleArenaClient, ClientTransports};
 use systems::BattleArenaClientPlugin;
 
@@ -39,6 +40,7 @@ fn main() {
     app.add_plugins(BattleArenaClientPlugin);
     app.add_plugins(AbilityClientPlugin);
     app.add_plugins(DummyClientPlugin);
+    app.add_plugins(VfxPlugin);
 
     app.world_mut().spawn(BattleArenaClient {
         client_id,

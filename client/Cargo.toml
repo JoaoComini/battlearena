@@ -26,6 +26,7 @@ bevy_egui = { workspace = true, optional = true }
 physics = { workspace = true }
 inputs = { workspace = true }
 characters = { workspace = true }
+vfx = { workspace = true }
 
 [lints]
 workspace = true

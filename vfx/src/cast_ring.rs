@@ -1,0 +1,36 @@
+use abilities::types::{AbilityInstance, Casting};
+use avian2d::prelude::Position;
+use bevy::prelude::*;
+
+use crate::lifetime::EffectLifetime;
+use crate::util::pos2_to_vec3;
+
+pub fn on_casting_added(
+    trigger: On<Add, Casting>,
+    instances: Query<(&AbilityInstance, &Casting)>,
+    positions: Query<&Position>,
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
+    let Ok((instance, casting)) = instances.get(trigger.entity) else {
+        return;
+    };
+    let Ok(pos) = positions.get(instance.caster) else {
+        return;
+    };
+
+    commands.spawn((
+        Mesh3d(meshes.add(Circle::new(1.2))),
+        MeshMaterial3d(materials.add(StandardMaterial {
+            base_color: Color::srgba(0.3, 0.6, 1.0, 0.5),
+            emissive: LinearRgba::rgb(0.5, 1.0, 2.0),
+            alpha_mode: AlphaMode::Blend,
+            unlit: true,
+            ..default()
+        })),
+        Transform::from_translation(pos2_to_vec3(pos.x, pos.y, 0.02))
+            .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
+        EffectLifetime::new(casting.remaining_secs),
+    ));
+}
