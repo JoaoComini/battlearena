@@ -72,7 +72,7 @@ pub fn spawn_character_trail(
             EffectLifetime::new(0.6),
             OutroAnim {
                 anim: assets.outro.clone(),
-                y_offset: 0.5,
+                y_offset: 0.7,
                 rotation: Some(Quat::IDENTITY),
                 // VFX3 frames are 128×256 (1:2 ratio), scale Y accordingly
                 scale: Some(Vec3::new(1.0, 2.0, 1.0)),
