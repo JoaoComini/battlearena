@@ -2,7 +2,7 @@ use avian2d::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
 use protocol::PlayerId;
 
-use crate::lifetime::EffectLifetime;
+use crate::lifetime::{EffectLifetime, OutroAnim};
 use crate::sprite_anim::SpriteAnim;
 use crate::util::pos2_to_vec3;
 
@@ -15,16 +15,21 @@ pub struct CharacterTrailState {
 #[derive(Resource)]
 pub struct FootstepAssets {
     pub anim: SpriteAnim,
+    pub outro: SpriteAnim,
 }
 
 pub fn load_footstep_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
 ) {
-    // VFX5: 512×128 sheet, 4 columns × 1 row, each frame 128×128
-    let image = asset_server.load("vfx/VFX5/Sprite-sheet/Sprite-sheet.png");
+    // VFX5: 512×128 sheet, 4 cols × 1 row, each frame 128×128
+    let vfx5 = asset_server.load("vfx/VFX5/Sprite-sheet/Sprite-sheet.png");
+    // VFX3: 640×256 sheet, 5 cols × 2 rows, each frame 128×128 (5 frames total, last row is empty)
+    let vfx3 = asset_server.load("vfx/VFX3/Sprite-sheet/Sprite-sheet.png");
+
     commands.insert_resource(FootstepAssets {
-        anim: SpriteAnim::sheet(image, 4, 1, 4, 0.08),
+        anim: SpriteAnim::sheet(vfx5, 4, 1, 4, 0.08),
+        outro: SpriteAnim::sheet(vfx3, 5, 2, 5, 0.07),
     });
 }
 
@@ -49,7 +54,6 @@ pub fn spawn_character_trail(
 
         let dir = vel.0.normalize();
         let behind = -dir * 0.3;
-        // perpendicular to movement direction, alternating left/right
         let side = Vec2::new(-dir.y, dir.x) * if state.foot { 0.2 } else { -0.2 };
         let px = pos.x + behind.x + side.x;
         let py = pos.y + behind.y + side.y;
@@ -66,6 +70,7 @@ pub fn spawn_character_trail(
                 .with_scale(Vec3::splat(0.5)),
             anim,
             EffectLifetime::new(0.6),
+            OutroAnim(assets.outro.clone()),
         ));
     }
 }
