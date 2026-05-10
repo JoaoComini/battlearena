@@ -6,12 +6,12 @@ mod lifetime;
 mod projectile_trail;
 mod util;
 
-use ability_burst::on_active_added;
-use cast_ring::on_casting_added;
+use ability_burst::on_ability_burst_tag;
+use cast_ring::on_cast_ring_tag;
 use character_trail::{spawn_character_trail, CharacterTrailState};
 use hit_flash::spawn_hit_flash;
 use lifetime::tick_effect_lifetimes;
-use projectile_trail::{on_projectile_spawned, tick_trail_emitters};
+use projectile_trail::{on_projectile_trail_tag, tick_trail_emitters};
 
 use bevy::prelude::*;
 
@@ -31,8 +31,8 @@ impl Plugin for VfxPlugin {
             ),
         );
 
-        app.add_observer(on_casting_added);
-        app.add_observer(on_active_added);
-        app.add_observer(on_projectile_spawned);
+        app.add_observer(on_cast_ring_tag);
+        app.add_observer(on_ability_burst_tag);
+        app.add_observer(on_projectile_trail_tag);
     }
 }

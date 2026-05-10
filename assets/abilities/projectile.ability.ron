@@ -2,7 +2,7 @@
     key: "projectile",
     cooldown_secs: 0.5,
     events: [
-        Activate,
-        Projectile(speed: 12.0, size: 0.5, damage: 20.0, max_range: 15.0),
+        Activate(vfx: Some("activate_projectile")),
+        Projectile(speed: 12.0, size: 0.5, damage: 20.0, max_range: 15.0, trail_vfx: Some("projectile_trail"), hit_vfx: None),
     ],
 )

@@ -25,6 +25,11 @@ impl PlayerBundle {
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct LocalPlayer;
 
+/// Tag that tells the VFX system what effect to play on this entity.
+/// Replicated so clients receive it alongside any gameplay entity.
+#[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct VfxTag(pub String);
+
 #[derive(Component, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct PlayerId(pub PeerId);
 
@@ -57,5 +62,6 @@ impl Plugin for ProtocolPlugin {
                 (a.0 - b.0).length() >= 0.01
             });
 
+        app.register_component::<VfxTag>();
     }
 }

@@ -5,6 +5,7 @@ use crate::types::{
 use avian2d::prelude::{Collider, Position, Rotation, SpatialQuery, SpatialQueryFilter};
 use bevy::prelude::*;
 use physics::pie_slice_collider;
+use protocol::VfxTag;
 use crate::attributes::Health;
 
 pub(crate) fn advance_instance(
@@ -32,28 +33,38 @@ pub(crate) fn advance_instance(
     };
 
     match event {
-        AbilityEvent::Cast { secs } => {
-            commands.entity(entity).insert(Casting { remaining_secs: *secs });
+        AbilityEvent::Cast { secs, vfx } => {
+            if let Some(tag) = vfx {
+                commands.entity(entity).insert((Casting { remaining_secs: *secs }, VfxTag(tag.clone())));
+            } else {
+                commands.entity(entity).insert(Casting { remaining_secs: *secs });
+            }
         }
-        AbilityEvent::Activate => {
+        AbilityEvent::Activate { vfx } => {
             if let Some(remaining) = cooldowns.remaining.get_mut(slot_idx) {
                 *remaining = def.cooldown_secs;
             }
-            commands.entity(entity).insert((Active, Advance));
+            if let Some(tag) = vfx {
+                commands.entity(entity).insert((Active, Advance, VfxTag(tag.clone())));
+            } else {
+                commands.entity(entity).insert((Active, Advance));
+            }
         }
-        AbilityEvent::MeleeHit { range, angle_deg, damage } => {
+        AbilityEvent::MeleeHit { range, angle_deg, damage, .. } => {
             commands.entity(entity).insert(MeleeHitRequest {
                 range: *range,
                 angle_deg: *angle_deg,
                 damage: *damage,
             });
         }
-        AbilityEvent::Projectile { speed, size, damage, max_range } => {
+        AbilityEvent::Projectile { speed, size, damage, max_range, trail_vfx, hit_vfx } => {
             commands.entity(entity).insert(ProjectileRequest {
                 speed: *speed,
                 size: *size,
                 damage: *damage,
                 max_range: *max_range,
+                trail_vfx: trail_vfx.clone(),
+                hit_vfx: hit_vfx.clone(),
             });
         }
     }
@@ -97,7 +108,7 @@ pub(crate) fn process_projectile_request(
 ) {
     for (entity, req, instance) in &instances {
         let direction = Vec2::from_angle(instance.facing_rad + std::f32::consts::FRAC_PI_2);
-        commands.spawn((
+        let mut projectile = commands.spawn((
             ProjectileHitbox {
                 instance: entity,
                 caster: instance.caster,
@@ -108,11 +119,15 @@ pub(crate) fn process_projectile_request(
                 distance_traveled: 0.0,
                 direction,
                 already_hit: Vec::new(),
+                hit_vfx: req.hit_vfx.clone(),
             },
             Position(instance.origin),
             Rotation::radians(instance.facing_rad),
             Collider::circle(req.size),
         ));
+        if let Some(tag) = &req.trail_vfx {
+            projectile.insert(VfxTag(tag.clone()));
+        }
         commands.entity(entity).remove::<ProjectileRequest>();
     }
 }

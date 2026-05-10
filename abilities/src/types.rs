@@ -35,10 +35,10 @@ impl AbilityCooldowns {
 
 #[derive(Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum AbilityEvent {
-    Cast { secs: f32 },
-    Activate,
-    MeleeHit { range: f32, angle_deg: f32, damage: f32 },
-    Projectile { speed: f32, size: f32, damage: f32, max_range: f32 },
+    Cast { secs: f32, vfx: Option<String> },
+    Activate { vfx: Option<String> },
+    MeleeHit { range: f32, angle_deg: f32, damage: f32, hit_vfx: Option<String> },
+    Projectile { speed: f32, size: f32, damage: f32, max_range: f32, trail_vfx: Option<String>, hit_vfx: Option<String> },
 }
 
 #[derive(Asset, Reflect, Serialize, Deserialize, Clone, Debug)]
@@ -74,6 +74,8 @@ pub(crate) struct ProjectileRequest {
     pub size: f32,
     pub damage: f32,
     pub max_range: f32,
+    pub trail_vfx: Option<String>,
+    pub hit_vfx: Option<String>,
 }
 
 /// Replicated: instance is in its cast-time phase.
@@ -115,4 +117,5 @@ pub struct ProjectileHitbox {
     pub distance_traveled: f32,
     pub direction: Vec2,
     pub already_hit: Vec<Entity>,
+    pub hit_vfx: Option<String>,
 }

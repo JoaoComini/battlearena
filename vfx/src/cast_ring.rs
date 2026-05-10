@@ -1,25 +1,25 @@
 use abilities::types::{AbilityInstance, Casting};
-use avian2d::prelude::Position;
 use bevy::prelude::*;
+use protocol::VfxTag;
 
 use crate::lifetime::EffectLifetime;
 use crate::util::pos2_to_vec3;
 
-pub fn on_casting_added(
-    trigger: On<Add, Casting>,
-    instances: Query<(&AbilityInstance, &Casting)>,
-    positions: Query<&Position>,
+pub fn on_cast_ring_tag(
+    trigger: On<Add, VfxTag>,
+    tags: Query<&VfxTag>,
+    instances: Query<&AbilityInstance>,
+    castings: Query<&Casting>,
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    let Ok((instance, casting)) = instances.get(trigger.entity) else {
-        return;
-    };
-    let Ok(pos) = positions.get(instance.caster) else {
-        return;
-    };
+    let Ok(tag) = tags.get(trigger.entity) else { return };
+    if tag.0 != "cast_ring" { return }
+    let Ok(instance) = instances.get(trigger.entity) else { return };
+    let Ok(casting) = castings.get(trigger.entity) else { return };
 
+    let origin = instance.origin;
     commands.spawn((
         Mesh3d(meshes.add(Circle::new(1.2))),
         MeshMaterial3d(materials.add(StandardMaterial {
@@ -29,7 +29,7 @@ pub fn on_casting_added(
             unlit: true,
             ..default()
         })),
-        Transform::from_translation(pos2_to_vec3(pos.x, pos.y, 0.02))
+        Transform::from_translation(pos2_to_vec3(origin.x, origin.y, 0.02))
             .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
         EffectLifetime::new(casting.remaining_secs),
     ));
