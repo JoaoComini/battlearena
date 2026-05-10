@@ -29,7 +29,7 @@ pub fn load_footstep_assets(
 
     commands.insert_resource(FootstepAssets {
         anim: SpriteAnim::sheet(vfx5, 4, 1, 4, 0.08),
-        outro: SpriteAnim::sheet(vfx3, 5, 2, 5, 0.07),
+        outro: SpriteAnim::sheet(vfx3, 5, 1, 5, 0.07),
     });
 }
 
@@ -70,7 +70,13 @@ pub fn spawn_character_trail(
                 .with_scale(Vec3::splat(0.5)),
             anim,
             EffectLifetime::new(0.6),
-            OutroAnim(assets.outro.clone()),
+            OutroAnim {
+                anim: assets.outro.clone(),
+                y_offset: 0.5,
+                rotation: Some(Quat::IDENTITY),
+                // VFX3 frames are 128×256 (1:2 ratio), scale Y accordingly
+                scale: Some(Vec3::new(1.0, 2.0, 1.0)),
+            },
         ));
     }
 }
