@@ -1,9 +1,8 @@
 use avian2d::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
+use bevy::scene::SceneInstanceReady;
 use protocol::PlayerId;
 
-use crate::lifetime::{EffectLifetime, OutroAnim};
-use crate::sprite_anim::SpriteAnim;
 use crate::util::pos2_to_vec3;
 
 #[derive(Resource, Default)]
@@ -14,22 +13,36 @@ pub struct CharacterTrailState {
 
 #[derive(Resource)]
 pub struct FootstepAssets {
-    pub anim: SpriteAnim,
-    pub outro: SpriteAnim,
+    pub scene: Handle<Scene>,
+    pub graph: Handle<AnimationGraph>,
+    pub index: AnimationNodeIndex,
+}
+
+/// Marks a spawned footprint scene so we can find its AnimationPlayer
+/// and despawn it when the animation finishes.
+#[derive(Component)]
+pub struct FootprintScene;
+
+/// Placed on the AnimationPlayer entity inside the footprint scene.
+#[derive(Component)]
+pub struct FootprintPlayer {
+    pub root: Entity,
+    pub index: AnimationNodeIndex,
 }
 
 pub fn load_footstep_assets(
     mut commands: Commands,
     asset_server: Res<AssetServer>,
+    mut graphs: ResMut<Assets<AnimationGraph>>,
 ) {
-    // VFX5: 512×128 sheet, 4 cols × 1 row, each frame 128×128
-    let vfx5 = asset_server.load("vfx/VFX5/Sprite-sheet/Sprite-sheet.png");
-    // VFX3: 640×256 sheet, 5 cols × 2 rows, each frame 128×128 (5 frames total, last row is empty)
-    let vfx3 = asset_server.load("vfx/VFX3/Sprite-sheet/Sprite-sheet.png");
-
+    let clip: Handle<AnimationClip> =
+        asset_server.load(GltfAssetLabel::Animation(0).from_asset("vfx/lightning_footprint.glb"));
+    let mut graph = AnimationGraph::new();
+    let index = graph.add_clip(clip, 1.0, graph.root);
     commands.insert_resource(FootstepAssets {
-        anim: SpriteAnim::sheet(vfx5, 4, 1, 4, 0.08),
-        outro: SpriteAnim::sheet(vfx3, 5, 1, 5, 0.07),
+        scene: asset_server.load(GltfAssetLabel::Scene(0).from_asset("vfx/lightning_footprint.glb")),
+        graph: graphs.add(graph),
+        index,
     });
 }
 
@@ -38,8 +51,6 @@ pub fn spawn_character_trail(
     mut state: ResMut<CharacterTrailState>,
     assets: Res<FootstepAssets>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     state.frame += 1;
     if state.frame % 16 != 0 {
@@ -58,25 +69,64 @@ pub fn spawn_character_trail(
         let px = pos.x + behind.x + side.x;
         let py = pos.y + behind.y + side.y;
 
-        let mut anim = assets.anim.clone();
-        anim.looping = true;
-        let mat = materials.add(anim.initial_material());
-
         commands.spawn((
-            Mesh3d(meshes.add(Rectangle::new(1.0, 1.0))),
-            MeshMaterial3d(mat),
-            Transform::from_translation(pos2_to_vec3(px, py, 0.01))
-                .with_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2))
-                .with_scale(Vec3::splat(0.5)),
-            anim,
-            EffectLifetime::new(0.6),
-            OutroAnim {
-                anim: assets.outro.clone(),
-                y_offset: 1.3,
-                rotation: Some(Quat::from_rotation_x(-50_f32.to_radians())),
-                // VFX3 frames are 128×256 (1:2 ratio), scale Y accordingly
-                scale: Some(Vec3::new(1.0, 2.0, 1.0)),
-            },
+            SceneRoot(assets.scene.clone()),
+            Transform::from_translation(pos2_to_vec3(px, py, 0.0)),
+            FootprintScene,
         ));
     }
+}
+
+pub fn on_footprint_ready(
+    trigger: On<SceneInstanceReady>,
+    footprints: Query<&FootprintScene>,
+    children: Query<&Children>,
+    animation_players: Query<Entity, With<AnimationPlayer>>,
+    assets: Res<FootstepAssets>,
+    mut commands: Commands,
+) {
+    let root = trigger.entity;
+    if footprints.get(root).is_err() {
+        return;
+    }
+
+    let Some(player_entity) = find_descendant(root, &children, &animation_players) else {
+        return;
+    };
+
+    commands.entity(player_entity).insert((
+        AnimationGraphHandle(assets.graph.clone()),
+        FootprintPlayer { root, index: assets.index },
+    ));
+}
+
+pub fn tick_footprint_players(
+    mut query: Query<(Entity, &mut AnimationPlayer, &FootprintPlayer)>,
+    mut commands: Commands,
+) {
+    for (_entity, mut player, fp) in &mut query {
+        let active = player.play(fp.index);
+        if active.is_finished() {
+            commands.entity(fp.root).despawn();
+        }
+    }
+}
+
+fn find_descendant<T: Component>(
+    root: Entity,
+    children_query: &Query<&Children>,
+    target_query: &Query<Entity, With<T>>,
+) -> Option<Entity> {
+    if target_query.get(root).is_ok() {
+        return Some(root);
+    }
+    let Ok(children) = children_query.get(root) else {
+        return None;
+    };
+    for child in children.iter() {
+        if let Some(found) = find_descendant(child, children_query, target_query) {
+            return Some(found);
+        }
+    }
+    None
 }

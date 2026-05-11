@@ -7,7 +7,10 @@ mod lifetime;
 mod sprite_anim;
 mod util;
 
-use character_trail::{load_footstep_assets, spawn_character_trail, CharacterTrailState};
+use character_trail::{
+    load_footstep_assets, on_footprint_ready, spawn_character_trail, tick_footprint_players,
+    CharacterTrailState,
+};
 use dispatcher::on_vfx_tag;
 use effects::projectile_trail::tick_trail_emitters;
 use hit_flash::spawn_hit_flash;
@@ -23,6 +26,7 @@ impl Plugin for VfxPlugin {
         app.init_resource::<CharacterTrailState>();
 
         app.add_observer(on_vfx_tag);
+        app.add_observer(on_footprint_ready);
 
         app.add_systems(Startup, load_footstep_assets);
 
@@ -34,6 +38,7 @@ impl Plugin for VfxPlugin {
                 spawn_hit_flash,
                 tick_trail_emitters,
                 spawn_character_trail,
+                tick_footprint_players,
             ),
         );
     }
