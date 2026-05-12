@@ -2,7 +2,7 @@ use abilities::Health;
 use avian2d::prelude::*;
 use bevy::prelude::*;
 use lightyear::prelude::*;
-use physics::PLAYER_SIZE;
+use physics::{GameLayer, PLAYER_SIZE};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq, Default)]
@@ -66,6 +66,7 @@ fn do_spawn_dummy(mut commands: Commands) {
         Position::from_xy(10.0, 0.0),
         RigidBody::Static,
         Collider::circle(PLAYER_SIZE * 0.5),
+        CollisionLayers::new(GameLayer::Character, LayerMask::ALL),
         Health {
             current: 100.0,
             max: 100.0,

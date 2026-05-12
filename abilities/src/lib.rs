@@ -6,7 +6,7 @@ pub mod server;
 pub mod systems;
 pub mod types;
 
-pub use attributes::{Attribute, Health, Modifier, MovementSpeed};
+pub use attributes::{Attribute, Energy, Health, Modifier, MovementSpeed};
 pub use types::CommandsAbilityExt;
 
 use crate::types::{AbilityCooldowns, AbilityDef, AbilityInstance, Active};
@@ -23,6 +23,7 @@ impl Plugin for AbilitySharedPlugin {
             .register_asset_loader(RonAbilityLoader);
 
         app.register_component::<Health>();
+        app.register_component::<Energy>();
         app.register_component::<MovementSpeed>()
             .add_prediction()
             .add_should_rollback(|a: &MovementSpeed, b: &MovementSpeed| (a.0 - b.0).abs() >= 0.001);

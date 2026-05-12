@@ -1,5 +1,5 @@
 use abilities::types::{AbilityCooldowns, AbilityDef, AbilityLoadout, AbilitySlot};
-use abilities::{Health, MovementSpeed};
+use abilities::{Energy, Health, MovementSpeed};
 use bevy::prelude::*;
 use physics::MoveAndSlideBundle;
 use serde::{Deserialize, Serialize};
@@ -34,6 +34,7 @@ pub struct Character(pub Handle<CharacterDef>);
 #[derive(Bundle)]
 pub struct CharacterBundle {
     pub health: Health,
+    pub energy: Energy,
     pub move_speed: MovementSpeed,
     pub loadout: AbilityLoadout,
     pub cooldowns: AbilityCooldowns,
@@ -48,6 +49,7 @@ impl CharacterDef {
                 current: self.max_health,
                 max: self.max_health,
             },
+            energy: Energy::default(),
             move_speed: MovementSpeed(self.move_speed),
             loadout: AbilityLoadout {
                 slots: self

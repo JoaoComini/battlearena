@@ -1,4 +1,5 @@
-use avian2d::prelude::{Collider, Position, Rotation};
+use avian2d::prelude::{Collider, CollisionLayers, LayerMask, Position, Rotation};
+use physics::GameLayer;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -94,7 +95,7 @@ pub trait CommandsAbilityExt {
         speed: f32,
         size: f32,
         max_range: f32,
-        on_hit: impl Fn(Entity, &mut Commands) + Send + Sync + 'static,
+        on_hit: impl Fn(Entity, LayerMask, &mut Commands) + Send + Sync + 'static,
     );
 }
 
@@ -167,7 +168,7 @@ impl CommandsAbilityExt for Commands<'_, '_> {
         speed: f32,
         size: f32,
         max_range: f32,
-        on_hit: impl Fn(Entity, &mut Commands) + Send + Sync + 'static,
+        on_hit: impl Fn(Entity, LayerMask, &mut Commands) + Send + Sync + 'static,
     ) {
         let direction = Vec2::from_angle(facing_rad + std::f32::consts::FRAC_PI_2);
         self.spawn((
@@ -185,6 +186,7 @@ impl CommandsAbilityExt for Commands<'_, '_> {
             Position(origin),
             Rotation::radians(facing_rad),
             Collider::circle(size),
+            CollisionLayers::new(GameLayer::Projectile, !LayerMask::from(GameLayer::Projectile)),
         ));
     }
 }
@@ -213,7 +215,7 @@ pub struct ProjectileTask {
     pub distance_traveled: f32,
     pub direction: Vec2,
     pub already_hit: Vec<Entity>,
-    pub on_hit: Box<dyn Fn(Entity, &mut Commands) + Send + Sync>,
+    pub on_hit: Box<dyn Fn(Entity, LayerMask, &mut Commands) + Send + Sync>,
 }
 
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, PartialEq, Debug)]

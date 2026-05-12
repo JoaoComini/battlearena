@@ -1,7 +1,9 @@
-use crate::attributes::{Health, Modifier};
+use crate::attributes::{Energy, Health, Modifier};
 use crate::types::{Ability, AbilityInstance, CommandsAbilityExt};
+use avian2d::prelude::LayerMask;
 use bevy::prelude::{Commands, Entity};
 use bevy::reflect::Reflect;
+use physics::GameLayer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Reflect, Serialize, Deserialize, Clone, Debug)]
@@ -39,6 +41,7 @@ impl Ability for Melee {
                 ability.angle_deg,
                 move |hit, commands| {
                     commands.apply_effect::<Health>(hit, -ability.damage, Modifier::Add);
+                    commands.apply_effect::<Energy>(inst.caster, 5.0, Modifier::Add);
                 },
                 move |commands| {
                     commands.end_ability(instance);
@@ -69,8 +72,11 @@ impl Ability for Projectile {
             ability.speed,
             ability.size,
             ability.max_range,
-            move |hit, commands| {
-                commands.apply_effect::<Health>(hit, -ability.damage, Modifier::Add);
+            move |hit, memberships, commands| {
+                if memberships.has_all(LayerMask::from(GameLayer::Character)) {
+                    commands.apply_effect::<Health>(hit, -ability.damage, Modifier::Add);
+                    commands.apply_effect::<Energy>(inst.caster, 5.0, Modifier::Add);
+                }
                 commands.end_ability(instance);
             },
         );

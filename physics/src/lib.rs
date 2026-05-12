@@ -9,6 +9,14 @@ use lightyear::prelude::Interpolated;
 
 pub const PLAYER_SIZE: f32 = 0.8;
 
+#[derive(PhysicsLayer, Default, Clone, Copy, Debug)]
+pub enum GameLayer {
+    #[default]
+    Environment,
+    Character,
+    Projectile,
+}
+
 pub fn pie_slice_collider(range: f32, angle_deg: f32, facing_rad: f32) -> Option<Collider> {
     let half = (angle_deg / 2.0).to_radians();
     let steps = 8usize;
@@ -31,6 +39,7 @@ pub struct MoveAndSlideBundle {
     pub custom_position_integration: CustomPositionIntegration,
     pub collider: Collider,
     pub results: MoveAndSlideResult,
+    pub collision_layers: CollisionLayers,
 }
 
 impl Default for MoveAndSlideBundle {
@@ -40,6 +49,7 @@ impl Default for MoveAndSlideBundle {
             custom_position_integration: CustomPositionIntegration,
             collider: Collider::circle(PLAYER_SIZE * 0.5),
             results: MoveAndSlideResult::default(),
+            collision_layers: CollisionLayers::new(GameLayer::Character, LayerMask::ALL),
         }
     }
 }

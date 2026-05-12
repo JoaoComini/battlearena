@@ -1,4 +1,4 @@
-use crate::attributes::{EffectEvent, Health};
+use crate::attributes::{EffectEvent, Energy, Health};
 use crate::systems::{
     apply_ability_effects, move_projectiles, process_melee_hit_tasks, tick_casting_tasks,
     tick_cooldowns, tick_projectile_collision,
@@ -17,6 +17,7 @@ impl Plugin for AbilityServerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugins(AbilitySharedPlugin);
         app.add_message::<EffectEvent<Health>>();
+        app.add_message::<EffectEvent<Energy>>();
         app.add_systems(
             FixedUpdate,
             (
@@ -27,6 +28,7 @@ impl Plugin for AbilityServerPlugin {
                 move_projectiles,
                 tick_projectile_collision,
                 apply_ability_effects::<Health>,
+                apply_ability_effects::<Energy>,
             )
                 .chain(),
         );
