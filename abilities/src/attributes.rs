@@ -1,8 +1,47 @@
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use serde::{Deserialize, Serialize};
+use std::marker::PhantomData;
+
+pub trait Attribute: Component<Mutability = Mutable> {
+    fn apply_modifier(&mut self, value: f32, modifier: Modifier);
+}
+
+#[derive(Message)]
+pub struct EffectEvent<A: Attribute> {
+    pub target: Entity,
+    pub value: f32,
+    pub modifier: Modifier,
+    _marker: PhantomData<A>,
+}
+
+impl<A: Attribute> EffectEvent<A> {
+    pub fn new(target: Entity, value: f32, modifier: Modifier) -> Self {
+        Self {
+            target,
+            value,
+            modifier,
+            _marker: PhantomData,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Modifier {
+    Add,
+    Mul,
+}
 
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct MovementSpeed(pub f32);
+
+impl Attribute for MovementSpeed {
+    fn apply_modifier(&mut self, value: f32, modifier: Modifier) {
+        match modifier {
+            Modifier::Add => self.0 += value,
+            Modifier::Mul => self.0 *= value,
+        }
+    }
+}
 
 #[derive(Component, Reflect, Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Health {
@@ -10,11 +49,16 @@ pub struct Health {
     pub max: f32,
 }
 
-impl Health {
-    pub fn apply_damage(&mut self, amount: f32) {
-        self.current = (self.current - amount).clamp(0.0, self.max);
+impl Attribute for Health {
+    fn apply_modifier(&mut self, value: f32, modifier: Modifier) {
+        match modifier {
+            Modifier::Add => self.current = (self.current + value).clamp(0.0, self.max),
+            Modifier::Mul => self.current = (self.current * value).clamp(0.0, self.max),
+        }
     }
+}
 
+impl Health {
     pub fn is_dead(&self) -> bool {
         self.current <= 0.0
     }

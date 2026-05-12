@@ -1,8 +1,9 @@
 (
-    key: "projectile",
     cooldown_secs: 0.5,
-    events: [
-        Activate,
-        Projectile(speed: 12.0, size: 0.5, damage: 20.0, max_range: 15.0),
-    ],
+    ability: Projectile((
+        speed: 12.0,
+        size: 0.5,
+        max_range: 15.0,
+        damage: 20.0,
+    )),
 )
