@@ -1,6 +1,6 @@
 use avian2d::prelude::{LinearVelocity, Position};
 use bevy::prelude::*;
-use bevy::scene::SceneInstanceReady;
+use bevy_hanabi::prelude::*;
 use protocol::PlayerId;
 
 use crate::util::pos2_to_vec3;
@@ -8,48 +8,64 @@ use crate::util::pos2_to_vec3;
 #[derive(Resource, Default)]
 pub struct CharacterTrailState {
     frame: u32,
-    foot: bool, // false = left, true = right
+    foot: bool,
 }
 
 #[derive(Resource)]
-pub struct FootstepAssets {
-    pub scene: Handle<Scene>,
-    pub graph: Handle<AnimationGraph>,
-    pub index: AnimationNodeIndex,
-}
+pub struct FootstepEffect(pub Handle<EffectAsset>);
 
-/// Marks a spawned footprint scene so we can find its AnimationPlayer
-/// and despawn it when the animation finishes.
-#[derive(Component)]
-pub struct FootprintScene;
+pub fn setup_footstep_effect(mut commands: Commands, mut effects: ResMut<Assets<EffectAsset>>) {
+    let writer = ExprWriter::new();
 
-/// Placed on the AnimationPlayer entity inside the footprint scene.
-#[derive(Component)]
-pub struct FootprintPlayer {
-    pub root: Entity,
-    pub index: AnimationNodeIndex,
-}
+    let init_pos = SetPositionSphereModifier {
+        center: writer.lit(Vec3::ZERO).expr(),
+        radius: writer.lit(0.12_f32).expr(),
+        dimension: ShapeDimension::Surface,
+    };
 
-pub fn load_footstep_assets(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut graphs: ResMut<Assets<AnimationGraph>>,
-) {
-    let clip: Handle<AnimationClip> =
-        asset_server.load(GltfAssetLabel::Animation(0).from_asset("vfx/lightning_footprint.glb"));
-    let mut graph = AnimationGraph::new();
-    let index = graph.add_clip(clip, 1.0, graph.root);
-    commands.insert_resource(FootstepAssets {
-        scene: asset_server.load(GltfAssetLabel::Scene(0).from_asset("vfx/lightning_footprint.glb")),
-        graph: graphs.add(graph),
-        index,
-    });
+    let init_vel = SetVelocityTangentModifier {
+        origin: writer.lit(Vec3::ZERO).expr(),
+        axis: writer.lit(Vec3::Y).expr(),
+        speed: writer.lit(0.3_f32).expr(),
+    };
+
+    let lifetime = writer.lit(0.5_f32).expr();
+    let init_lifetime = SetAttributeModifier::new(Attribute::LIFETIME, lifetime);
+    let age = writer.lit(0_f32).expr();
+    let init_age = SetAttributeModifier::new(Attribute::AGE, age);
+
+    let mut color = bevy_hanabi::Gradient::new();
+    color.add_key(0.0, Vec4::new(0.5, 1.5, 4.0, 1.0));
+    color.add_key(0.5, Vec4::new(0.2, 0.8, 2.0, 0.6));
+    color.add_key(1.0, Vec4::new(0.1, 0.3, 1.0, 0.0));
+
+    let mut size = bevy_hanabi::Gradient::new();
+    size.add_key(0.0, Vec3::splat(0.05));
+    size.add_key(1.0, Vec3::splat(0.0));
+
+    let effect = EffectAsset::new(256, SpawnerSettings::once(20.0.into()), writer.finish())
+        .with_name("footstep")
+        .init(init_pos)
+        .init(init_vel)
+        .init(init_lifetime)
+        .init(init_age)
+        .render(ColorOverLifetimeModifier {
+            gradient: color,
+            blend: ColorBlendMode::Overwrite,
+            mask: ColorBlendMask::RGBA,
+        })
+        .render(SizeOverLifetimeModifier {
+            gradient: size,
+            screen_space_size: false,
+        });
+
+    commands.insert_resource(FootstepEffect(effects.add(effect)));
 }
 
 pub fn spawn_character_trail(
     players: Query<(&Position, &LinearVelocity), With<PlayerId>>,
     mut state: ResMut<CharacterTrailState>,
-    assets: Res<FootstepAssets>,
+    effect: Res<FootstepEffect>,
     mut commands: Commands,
 ) {
     state.frame += 1;
@@ -70,63 +86,8 @@ pub fn spawn_character_trail(
         let py = pos.y + behind.y + side.y;
 
         commands.spawn((
-            SceneRoot(assets.scene.clone()),
+            ParticleEffect::new(effect.0.clone()),
             Transform::from_translation(pos2_to_vec3(px, py, 0.0)),
-            FootprintScene,
         ));
     }
-}
-
-pub fn on_footprint_ready(
-    trigger: On<SceneInstanceReady>,
-    footprints: Query<&FootprintScene>,
-    children: Query<&Children>,
-    animation_players: Query<Entity, With<AnimationPlayer>>,
-    assets: Res<FootstepAssets>,
-    mut commands: Commands,
-) {
-    let root = trigger.entity;
-    if footprints.get(root).is_err() {
-        return;
-    }
-
-    let Some(player_entity) = find_descendant(root, &children, &animation_players) else {
-        return;
-    };
-
-    commands.entity(player_entity).insert((
-        AnimationGraphHandle(assets.graph.clone()),
-        FootprintPlayer { root, index: assets.index },
-    ));
-}
-
-pub fn tick_footprint_players(
-    mut query: Query<(Entity, &mut AnimationPlayer, &FootprintPlayer)>,
-    mut commands: Commands,
-) {
-    for (_entity, mut player, fp) in &mut query {
-        let active = player.play(fp.index);
-        if active.is_finished() {
-            commands.entity(fp.root).despawn();
-        }
-    }
-}
-
-fn find_descendant<T: Component>(
-    root: Entity,
-    children_query: &Query<&Children>,
-    target_query: &Query<Entity, With<T>>,
-) -> Option<Entity> {
-    if target_query.get(root).is_ok() {
-        return Some(root);
-    }
-    let Ok(children) = children_query.get(root) else {
-        return None;
-    };
-    for child in children.iter() {
-        if let Some(found) = find_descendant(child, children_query, target_query) {
-            return Some(found);
-        }
-    }
-    None
 }

@@ -4,6 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 bevy = { version = "0.18", features = ["bevy_state", "bevy_log", "reflect_auto_register"] }
+bevy_hanabi = { version = "0.18.0" }
 lightyear = { version = "0.26.4", features = ["interpolation", "prediction", "replication", "input_native", "udp", "netcode"] }
 avian2d = { version = "0.6.1", features = ["serialize", "debug-plugin"] }
 serde = { version = "1", features = ["derive"] }

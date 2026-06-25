@@ -3,7 +3,11 @@ use avian2d::prelude::Position;
 use bevy::prelude::*;
 use protocol::VfxTag;
 
-use crate::effects::{ability_burst, cast_ring, projectile_trail};
+use crate::effects::{
+    ability_burst::{spawn_melee, spawn_projectile, MeleeBurstEffect, ProjectileBurstEffect},
+    cast_ring::{spawn as spawn_cast_ring, CastRingEffect},
+    projectile_trail::{spawn_emitter, ProjectileTrailEffect},
+};
 use crate::event::VfxContext;
 
 pub fn on_vfx_tag(
@@ -12,9 +16,11 @@ pub fn on_vfx_tag(
     instances: Query<&AbilityInstance>,
     positions: Query<&Position>,
     castings: Query<&Casting>,
+    cast_ring: Res<CastRingEffect>,
+    melee: Res<MeleeBurstEffect>,
+    projectile_burst: Res<ProjectileBurstEffect>,
+    trail: Res<ProjectileTrailEffect>,
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let Ok(tag) = tags.get(trigger.entity) else { return };
 
@@ -33,10 +39,10 @@ pub fn on_vfx_tag(
     };
 
     match tag.0.as_str() {
-        "cast_ring"           => cast_ring::spawn(&ctx, &mut commands, &mut meshes, &mut materials),
-        "activate_melee"      => ability_burst::spawn_melee(&ctx, &mut commands, &mut meshes, &mut materials),
-        "activate_projectile" => ability_burst::spawn_projectile(&ctx, &mut commands, &mut meshes, &mut materials),
-        "projectile_trail"    => projectile_trail::spawn_emitter(&ctx, &mut commands),
+        "cast_ring"           => spawn_cast_ring(&ctx, &cast_ring, &mut commands),
+        "activate_melee"      => spawn_melee(&ctx, &melee, &mut commands),
+        "activate_projectile" => spawn_projectile(&ctx, &projectile_burst, &mut commands),
+        "projectile_trail"    => spawn_emitter(&ctx, &trail, &mut commands),
         _                     => {}
     }
 }
